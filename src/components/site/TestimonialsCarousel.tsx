@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Quote, Star } from "lucide-react";
-import { testimonials } from "../../src/lib/site-data";
+import { testimonials } from "../../lib/site-data";
 
 export function TestimonialsCarousel() {
   const [index, setIndex] = useState(0);
