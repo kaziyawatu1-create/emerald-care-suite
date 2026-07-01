@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Search, ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
@@ -38,16 +38,25 @@ function PharmacyPage() {
       <section className="section-pad">
         <div className="mx-auto max-w-7xl px-4 md:px-8">
           <Reveal>
-            <label className="flex items-center gap-3 rounded-full border border-border bg-card px-5 py-3 shadow-soft">
-              <Search className="h-5 w-5 text-primary" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search medicine categories"
-                aria-label="Search medicine categories"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              />
-            </label>
+            <div className="flex flex-wrap items-center gap-3 justify-between">
+              <label className="flex items-center gap-3 rounded-full border border-border bg-card px-5 py-3 shadow-soft flex-1 min-w-[260px]">
+                <Search className="h-5 w-5 text-primary" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search medicine categories"
+                  aria-label="Search medicine categories"
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </label>
+              <Link
+                to="/shop"
+                className="inline-flex items-center gap-2 rounded-full btn-gradient px-6 py-3 text-sm font-semibold font-display"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                Shop Medicine
+              </Link>
+            </div>
           </Reveal>
 
           <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
