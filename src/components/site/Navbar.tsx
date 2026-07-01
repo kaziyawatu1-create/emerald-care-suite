@@ -99,11 +99,11 @@ export function Navbar() {
               </Link>
             ))}
             <Link
-              to="/home-services"
+              to="/shop"
               onClick={() => setOpen(false)}
               className="mt-2 rounded-full btn-gradient px-5 py-3 text-center text-sm font-semibold font-display"
             >
-              Book Appointment
+              Shop Medicine
             </Link>
           </div>
         </div>
