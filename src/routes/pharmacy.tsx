@@ -68,9 +68,12 @@ function PharmacyPage() {
                   </span>
                   <h2 className="mt-5 font-display text-2xl font-bold">{item.name}</h2>
                   <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
-                  <button className="mt-6 rounded-full border border-border bg-background px-5 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary">
-                    Explore Category
-                  </button>
+                  <Link
+                    to="/shop"
+                    className="mt-6 inline-flex rounded-full border border-border bg-background px-5 py-2.5 text-sm font-semibold hover:border-primary hover:text-primary"
+                  >
+                    Shop {item.name}
+                  </Link>
                 </article>
               </Reveal>
             ))}
