@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/public/mpesa/callback")({
             result_code: cb.ResultCode ?? null,
             result_desc: cb.ResultDesc ?? null,
             mpesa_receipt: receipt ?? null,
-            raw_callback: payload as unknown as Record<string, unknown>,
+            raw_callback: JSON.parse(JSON.stringify(payload)),
             updated_at: new Date().toISOString(),
           })
           .eq("checkout_request_id", cb.CheckoutRequestID)
