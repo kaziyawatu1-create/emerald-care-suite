@@ -15,6 +15,7 @@ import { Navbar } from "../components/site/Navbar";
 import { Footer } from "../components/site/Footer";
 import { FloatingWhatsApp } from "../components/site/FloatingWhatsApp";
 import { BackToTop } from "../components/site/BackToTop";
+import { CartProvider } from "../lib/cart";
 
 function NotFoundComponent() {
   return (
@@ -111,15 +112,17 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-screen flex-col">
-        <Navbar />
-        <main className="flex-1">
-          <Outlet />
-        </main>
-        <Footer />
-      </div>
-      <FloatingWhatsApp />
-      <BackToTop />
+      <CartProvider>
+        <div className="flex min-h-screen flex-col">
+          <Navbar />
+          <main className="flex-1">
+            <Outlet />
+          </main>
+          <Footer />
+        </div>
+        <FloatingWhatsApp />
+        <BackToTop />
+      </CartProvider>
     </QueryClientProvider>
   );
 }

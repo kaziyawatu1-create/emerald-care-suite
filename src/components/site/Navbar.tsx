@@ -1,21 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, Pill } from "lucide-react";
+import { Menu, X, Pill, ShoppingBag } from "lucide-react";
+import { useCart } from "@/lib/cart";
 
 const links = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
   { to: "/laboratory", label: "Laboratory" },
   { to: "/pharmacy", label: "Pharmacy" },
+  { to: "/shop", label: "Shop" },
   { to: "/skincare", label: "Skincare" },
   { to: "/perfumes", label: "Perfumes" },
-  { to: "/home-services", label: "Home Services" },
   { to: "/contact", label: "Contact" },
 ] as const;
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { count } = useCart();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -53,10 +55,22 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <Link
-            to="/home-services"
+            to="/cart"
+            aria-label="Cart"
+            className="relative grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"
+          >
+            <ShoppingBag className="h-4.5 w-4.5 h-[18px] w-[18px]" />
+            {count > 0 && (
+              <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {count}
+              </span>
+            )}
+          </Link>
+          <Link
+            to="/shop"
             className="hidden md:inline-flex rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold font-display"
           >
-            Book Appointment
+            Shop Medicine
           </Link>
           <button
             aria-label="Toggle menu"
@@ -85,11 +99,11 @@ export function Navbar() {
               </Link>
             ))}
             <Link
-              to="/home-services"
+              to="/shop"
               onClick={() => setOpen(false)}
               className="mt-2 rounded-full btn-gradient px-5 py-3 text-center text-sm font-semibold font-display"
             >
-              Book Appointment
+              Shop Medicine
             </Link>
           </div>
         </div>
