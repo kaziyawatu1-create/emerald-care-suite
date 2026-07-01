@@ -14,7 +14,194 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      mpesa_transactions: {
+        Row: {
+          amount: number
+          checkout_request_id: string | null
+          created_at: string
+          id: string
+          merchant_request_id: string | null
+          mpesa_receipt: string | null
+          order_id: string
+          phone: string
+          raw_callback: Json | null
+          result_code: number | null
+          result_desc: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          checkout_request_id?: string | null
+          created_at?: string
+          id?: string
+          merchant_request_id?: string | null
+          mpesa_receipt?: string | null
+          order_id: string
+          phone: string
+          raw_callback?: Json | null
+          result_code?: number | null
+          result_desc?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          checkout_request_id?: string | null
+          created_at?: string
+          id?: string
+          merchant_request_id?: string | null
+          mpesa_receipt?: string | null
+          order_id?: string
+          phone?: string
+          raw_callback?: Json | null
+          result_code?: number | null
+          result_desc?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mpesa_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          id: string
+          order_id: string
+          product_id: string
+          product_name: string
+          quantity: number
+          subtotal_kes: number
+          unit_price_kes: number
+        }
+        Insert: {
+          id?: string
+          order_id: string
+          product_id: string
+          product_name: string
+          quantity: number
+          subtotal_kes: number
+          unit_price_kes: number
+        }
+        Update: {
+          id?: string
+          order_id?: string
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          subtotal_kes?: number
+          unit_price_kes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          delivery_fee_kes: number
+          id: string
+          notes: string | null
+          order_number: string
+          order_status: string
+          payment_method: string
+          payment_status: string
+          subtotal_kes: number
+          total_kes: number
+        }
+        Insert: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          delivery_fee_kes?: number
+          id?: string
+          notes?: string | null
+          order_number?: string
+          order_status?: string
+          payment_method: string
+          payment_status?: string
+          subtotal_kes: number
+          total_kes: number
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          delivery_address?: string
+          delivery_fee_kes?: number
+          id?: string
+          notes?: string | null
+          order_number?: string
+          order_status?: string
+          payment_method?: string
+          payment_status?: string
+          subtotal_kes?: number
+          total_kes?: number
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          in_stock: boolean
+          name: string
+          price_kes: number
+          requires_prescription: boolean
+          unit: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          in_stock?: boolean
+          name: string
+          price_kes: number
+          requires_prescription?: boolean
+          unit?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          in_stock?: boolean
+          name?: string
+          price_kes?: number
+          requires_prescription?: boolean
+          unit?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
