@@ -26,6 +26,7 @@ import {
   partners,
   serviceCategories,
   whyChooseItems,
+  shopWideImage
 } from "../lib/site-data";
 
 export const Route = createFileRoute("/")({
@@ -55,11 +56,11 @@ function Index() {
   return (
     <>
       <section className="relative overflow-hidden border-b border-border bg-[linear-gradient(180deg,color-mix(in_oklab,var(--primary)_5%,var(--background)),var(--background))]">
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,color-mix(in_oklab,var(--foreground)_72%,transparent),color-mix(in_oklab,var(--foreground)_18%,transparent))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,color-mix(in_oklab,var(--foreground)_48%,transparent),color-mix(in_oklab,var(--foreground)_12%,transparent))]" />
         <img
-          src={labWideImage}
+          src={shopWideImage}
           alt="Modern pharmacy laboratory interior"
-          className="absolute inset-0 h-full w-full object-cover mix-blend-multiply opacity-20"
+          className="absolute inset-0 h-full w-full object-cover mix-blend-multiply opacity-40"
           width={1600}
           height={1200}
         />
@@ -69,7 +70,7 @@ function Index() {
               Premium Medical + Modern Luxury
             </span>
             <h1 className="mt-6 font-display text-5xl font-bold leading-[0.95] md:text-7xl">
-              Your Trusted Healthcare Partner
+              Welness starts here.
             </h1>
             <p className="mt-6 max-w-2xl text-lg md:text-2xl font-medium text-primary-foreground/90">
               Quality Medicines. Reliable Laboratory Services. Professional Healthcare Solutions.
@@ -362,9 +363,9 @@ function Index() {
               </p>
               <div className="mt-8 grid gap-4">
                 {[
-                  [Phone, "Phone", "+256 700 000 000"],
-                  [Mail, "Email", "hello@nunopharmacy.com"],
-                  [MapPin, "Location", "Plot 42, Main Street, Kampala"],
+                  [Phone, "Phone", "0703244711"],
+                  [Mail, "Email", "mmuthamacollins90@gmail.com"],
+                  [MapPin, "Location", "Nairobi, South C, off Popo Road, opposite Midad Academy"],
                   [Clock3, "Business Hours", "Mon–Sun · 7:00 — 22:00"],
                 ].map(([Icon, label, value]) => {
                   const Cmp = Icon as typeof Phone;
@@ -387,7 +388,7 @@ function Index() {
             <div className="overflow-hidden rounded-[var(--radius-3xl)] border border-border bg-card shadow-elegant">
               <iframe
                 title="Nuno Pharmacy location"
-                src="https://www.google.com/maps?q=Kampala%20Uganda&z=13&output=embed"
+                src="https://www.google.com/maps?q=Kenya%20Nairobi%20South%20C%20opposite%20Midad%20Academy%20off%20Popo%20Road&z=15&output=embed"
                 className="h-[420px] w-full border-0"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"

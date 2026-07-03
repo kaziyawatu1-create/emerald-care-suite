@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { Facebook, Instagram, Twitter, Linkedin, Phone, Mail, MapPin, Clock, Pill } from "lucide-react";
+import { Facebook, Instagram, Twitter, Linkedin, Phone, Mail, MapPin, Clock } from "lucide-react";
+import logoImage from "@/assets/Logo.png";
 
 export function Footer() {
   return (
@@ -7,13 +8,15 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 md:px-8 py-16 grid gap-12 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <Link to="/" className="flex items-center gap-2.5">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <Pill className="h-5 w-5" />
-            </span>
+            <img
+              src={logoImage}
+              alt="Nuno Pharmacy logo"
+              className="h-10 w-10 rounded-xl object-cover"
+            />
             <span className="font-display text-lg font-bold">Nuno Pharmacy</span>
           </Link>
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            Your trusted healthcare partner — genuine medicines, certified laboratory services and professional pharmaceutical care.
+            Welness starts here — genuine medicines, certified laboratory services and professional pharmaceutical care.
           </p>
           <div className="mt-5 flex gap-2">
             {[Facebook, Instagram, Twitter, Linkedin].map((Icon, i) => (
@@ -28,7 +31,7 @@ export function Footer() {
         <div>
           <h4 className="font-display font-semibold mb-4">Quick Links</h4>
           <ul className="space-y-2.5 text-sm text-muted-foreground">
-            {[["/about","About Us"],["/laboratory","Laboratory"],["/pharmacy","Pharmacy"],["/skincare","Skincare"],["/perfumes","Perfumes"],["/home-services","Home Services"],["/contact","Contact"]].map(([to,label]) => (
+            {[['/about','About Us'],['/laboratory','Laboratory'],['/pharmacy','Pharmacy'],['/skincare','Skincare'],['/perfumes','Perfumes'],['/home-services','Home Services'],['/contact','Contact'],['/dashboard','Dashboard']].map(([to,label]) => (
               <li key={to}><Link to={to} className="hover:text-primary">{label}</Link></li>
             ))}
           </ul>
@@ -37,9 +40,9 @@ export function Footer() {
         <div>
           <h4 className="font-display font-semibold mb-4">Contact</h4>
           <ul className="space-y-3 text-sm text-muted-foreground">
-            <li className="flex gap-2.5"><Phone className="h-4 w-4 text-primary mt-0.5" /> +256 700 000 000</li>
-            <li className="flex gap-2.5"><Mail className="h-4 w-4 text-primary mt-0.5" /> hello@nunopharmacy.com</li>
-            <li className="flex gap-2.5"><MapPin className="h-4 w-4 text-primary mt-0.5" /> Plot 42, Main Street, Kampala</li>
+            <li className="flex gap-2.5"><Phone className="h-4 w-4 text-primary mt-0.5" /> 0703244711</li>
+            <li className="flex gap-2.5"><Mail className="h-4 w-4 text-primary mt-0.5" /> mmuthamacollins90@gmail.com</li>
+            <li className="flex gap-2.5"><MapPin className="h-4 w-4 text-primary mt-0.5" /> Kenya, Nairobi, South C, opposite Midad Academy, off Popo Road</li>
             <li className="flex gap-2.5"><Clock className="h-4 w-4 text-primary mt-0.5" /> Mon–Sun · 7:00 — 22:00</li>
           </ul>
         </div>

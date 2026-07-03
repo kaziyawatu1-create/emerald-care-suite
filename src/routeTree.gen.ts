@@ -16,12 +16,14 @@ import { Route as PharmacyRouteImport } from './routes/pharmacy'
 import { Route as PerfumesRouteImport } from './routes/perfumes'
 import { Route as LaboratoryRouteImport } from './routes/laboratory'
 import { Route as HomeServicesRouteImport } from './routes/home-services'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
+import { Route as ApiPublicContactRouteImport } from './routes/api/public/contact'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa/callback'
 
 const SkincareRoute = SkincareRouteImport.update({
@@ -59,6 +61,11 @@ const HomeServicesRoute = HomeServicesRouteImport.update({
   path: '/home-services',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -89,6 +96,11 @@ const OrderOrderIdRoute = OrderOrderIdRouteImport.update({
   path: '/order/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicContactRoute = ApiPublicContactRouteImport.update({
+  id: '/api/public/contact',
+  path: '/api/public/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMpesaCallbackRoute = ApiPublicMpesaCallbackRouteImport.update({
   id: '/api/public/mpesa/callback',
   path: '/api/public/mpesa/callback',
@@ -101,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/dashboard': typeof DashboardRoute
   '/home-services': typeof HomeServicesRoute
   '/laboratory': typeof LaboratoryRoute
   '/perfumes': typeof PerfumesRoute
@@ -109,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +131,7 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/dashboard': typeof DashboardRoute
   '/home-services': typeof HomeServicesRoute
   '/laboratory': typeof LaboratoryRoute
   '/perfumes': typeof PerfumesRoute
@@ -125,6 +140,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRoutesById {
@@ -134,6 +150,7 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/dashboard': typeof DashboardRoute
   '/home-services': typeof HomeServicesRoute
   '/laboratory': typeof LaboratoryRoute
   '/perfumes': typeof PerfumesRoute
@@ -142,6 +159,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
 }
 export interface FileRouteTypes {
@@ -152,6 +170,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/contact'
+    | '/dashboard'
     | '/home-services'
     | '/laboratory'
     | '/perfumes'
@@ -160,6 +179,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/skincare'
     | '/order/$orderId'
+    | '/api/public/contact'
     | '/api/public/mpesa/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -168,6 +188,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/contact'
+    | '/dashboard'
     | '/home-services'
     | '/laboratory'
     | '/perfumes'
@@ -176,6 +197,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/skincare'
     | '/order/$orderId'
+    | '/api/public/contact'
     | '/api/public/mpesa/callback'
   id:
     | '__root__'
@@ -184,6 +206,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/contact'
+    | '/dashboard'
     | '/home-services'
     | '/laboratory'
     | '/perfumes'
@@ -192,6 +215,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/skincare'
     | '/order/$orderId'
+    | '/api/public/contact'
     | '/api/public/mpesa/callback'
   fileRoutesById: FileRoutesById
 }
@@ -201,6 +225,7 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
+  DashboardRoute: typeof DashboardRoute
   HomeServicesRoute: typeof HomeServicesRoute
   LaboratoryRoute: typeof LaboratoryRoute
   PerfumesRoute: typeof PerfumesRoute
@@ -209,6 +234,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SkincareRoute: typeof SkincareRoute
   OrderOrderIdRoute: typeof OrderOrderIdRoute
+  ApiPublicContactRoute: typeof ApiPublicContactRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
 }
 
@@ -263,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
@@ -305,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrderOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/contact': {
+      id: '/api/public/contact'
+      path: '/api/public/contact'
+      fullPath: '/api/public/contact'
+      preLoaderRoute: typeof ApiPublicContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/mpesa/callback': {
       id: '/api/public/mpesa/callback'
       path: '/api/public/mpesa/callback'
@@ -321,6 +361,7 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
+  DashboardRoute: DashboardRoute,
   HomeServicesRoute: HomeServicesRoute,
   LaboratoryRoute: LaboratoryRoute,
   PerfumesRoute: PerfumesRoute,
@@ -329,8 +370,19 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SkincareRoute: SkincareRoute,
   OrderOrderIdRoute: OrderOrderIdRoute,
+  ApiPublicContactRoute: ApiPublicContactRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

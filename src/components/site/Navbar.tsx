@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, Pill, ShoppingBag } from "lucide-react";
+import { Menu, X, ShoppingBag, LayoutDashboard } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import logoImage from "@/assets/Logo.png";
 
 const links = [
   { to: "/", label: "Home" },
@@ -30,11 +31,13 @@ export function Navbar() {
     <header className={`sticky top-0 z-50 glass-nav transition-all ${scrolled ? "shadow-soft" : ""}`}>
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-8">
         <Link to="/" className="flex items-center gap-2.5 group">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-soft transition-transform group-hover:scale-105">
-            <Pill className="h-5 w-5" />
-          </span>
+          <img
+            src={logoImage}
+            alt="Nuno Pharmacy logo"
+            className="h-10 w-10"
+          />
           <span className="font-display text-lg font-bold tracking-tight">
-            Nuno<span className="text-primary"> Pharmacy</span>
+            <span className="text-primary"> Pharmacy</span>
           </span>
         </Link>
 
@@ -59,7 +62,7 @@ export function Navbar() {
             aria-label="Cart"
             className="relative grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"
           >
-            <ShoppingBag className="h-4.5 w-4.5 h-[18px] w-[18px]" />
+            <ShoppingBag className="h-4.5 w-4.5" />
             {count > 0 && (
               <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                 {count}
@@ -67,10 +70,23 @@ export function Navbar() {
             )}
           </Link>
           <Link
+            to="/dashboard"
+            aria-label="Dashboard"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"
+          >
+            <LayoutDashboard className="h-4.5 w-4.5" />
+          </Link>
+          <Link
             to="/shop"
             className="hidden md:inline-flex rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold font-display"
           >
             Shop Medicine
+          </Link>
+          <Link
+            to="/laboratory"
+            className="hidden md:inline-flex rounded-full border border-primary/20 bg-background/80 px-5 py-2.5 text-sm font-semibold font-display text-primary transition hover:bg-primary/5"
+          >
+            Book a Test
           </Link>
           <button
             aria-label="Toggle menu"
@@ -104,6 +120,13 @@ export function Navbar() {
               className="mt-2 rounded-full btn-gradient px-5 py-3 text-center text-sm font-semibold font-display"
             >
               Shop Medicine
+            </Link>
+            <Link
+              to="/laboratory"
+              onClick={() => setOpen(false)}
+              className="rounded-full border border-primary/20 bg-background/80 px-5 py-3 text-center text-sm font-semibold font-display text-primary"
+            >
+              Book a Test
             </Link>
           </div>
         </div>

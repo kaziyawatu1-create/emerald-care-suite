@@ -36,10 +36,7 @@ function LaboratoryPage() {
               <article className="overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-card shadow-soft card-lift">
                 <img src={test.image} alt={test.name} className="aspect-[4/3] w-full object-cover" loading="lazy" width={1280} height={960} />
                 <div className="p-6">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="font-display text-xl font-semibold">{test.name}</h2>
-                    <span className="rounded-full bg-gold/12 px-3 py-1 text-sm font-semibold text-gold">{test.price}</span>
-                  </div>
+                  <h2 className="font-display text-xl font-semibold">{test.name}</h2>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{test.description}</p>
                   <Link to="/contact" className="mt-6 inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-display font-semibold">
                     Book Test

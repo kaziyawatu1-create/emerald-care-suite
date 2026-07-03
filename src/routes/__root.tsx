@@ -70,10 +70,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Nuno Pharmacy — Your Trusted Healthcare Partner" },
+      { title: "Nuno Pharmacy — Wellness Starts Here" },
       { name: "description", content: "Genuine medicines, certified laboratory testing, skincare, vitamins and Dubai perfumes. Professional pharmaceutical care for individuals, families, and businesses." },
       { name: "author", content: "Nuno Pharmacy" },
-      { property: "og:title", content: "Nuno Pharmacy — Your Trusted Healthcare Partner" },
+      { property: "og:title", content: "Nuno Pharmacy — Wellness Starts Here" },
       { property: "og:description", content: "Quality Medicines. Reliable Laboratory Services. Professional Healthcare." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

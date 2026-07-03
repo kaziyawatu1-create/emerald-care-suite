@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { normalizeKenyanPhone } from "./mpesa";
+import { sendOrderReceiptEmail } from "./mail";
 
 function publicClient() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -93,6 +94,30 @@ export const placeOrder = createServerFn({ method: "POST" })
       .from("order_items")
       .insert(itemsWithPrice.map((i) => ({ ...i, order_id: order.id })));
     if (iErr) throw new Error(iErr.message);
+
+    try {
+      await sendOrderReceiptEmail({
+        to: data.customer_email ?? process.env.CONTACT_EMAIL ?? "mmuthamacollins90@gmail.com",
+        order: {
+          order_number: order.order_number,
+          customer_name: data.customer_name,
+          customer_phone: phone,
+          delivery_address: data.delivery_address,
+          total_kes: Number(order.total_kes),
+          payment_method: data.payment_method,
+          order_status: data.payment_method === "cod" ? "received" : "pending",
+          notes: data.notes ?? null,
+        },
+        items: itemsWithPrice.map((item) => ({
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price_kes: Number(item.unit_price_kes),
+          subtotal_kes: Number(item.subtotal_kes),
+        })),
+      });
+    } catch (emailError) {
+      console.error("Order receipt email failed", emailError);
+    }
 
     // Trigger STK push if M-Pesa
     let stk: { checkout_request_id: string | null; message: string } = { checkout_request_id: null, message: "" };

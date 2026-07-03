@@ -1,15 +1,21 @@
 import heroPharmacist from "../assets/hero-pharmacist.jpg";
-import serviceLab from "../assets/service-lab.jpg";
+import serviceLab from "../assets/tech1.png";
 import servicePharmacy from "../assets/service-pharmacy.jpg";
 import serviceSkincare from "../assets/service-skincare.jpg";
 import servicePerfumes from "../assets/service-perfumes.jpg";
-import servicePrescription from "../assets/service-prescription.jpg";
-import homeCollection from "../assets/home-collection.jpg";
+import servicePrescription from "../assets/tech2.png";
+import homeCollection from "../assets/home.jpg";
 import labWide from "../assets/lab-wide.jpg";
+import Hiv from "../assets/hiv.jpg";  
+import BloodSugar from "../assets/blood.jpeg";
+import Malaria from "../assets/malaria.jpeg";
+import Hpylori from "../assets/pylori.jpg";
+import shopWide from "../assets/hero.jpeg";
 
 export const heroImage = heroPharmacist;
 export const homeVisitImage = homeCollection;
 export const labWideImage = labWide;
+export const shopWideImage = shopWide;
 
 export const whyChooseItems = [
   {
@@ -127,31 +133,31 @@ export const laboratoryTests = [
     name: "Rapid HIV Testing",
     description: "Confidential screening with fast turnaround and professional counseling.",
     price: "$12",
-    image: serviceLab,
+    image: Hiv,
   },
   {
     name: "Blood Sugar Test",
     description: "Quick glucose checks for routine monitoring and clinical assessments.",
     price: "$8",
-    image: serviceLab,
+    image: BloodSugar,
   },
   {
     name: "Malaria Testing",
     description: "Reliable malaria diagnostics performed by trained laboratory staff.",
     price: "$10",
-    image: serviceLab,
+    image: Malaria,
   },
   {
     name: "H. pylori Test",
     description: "Digestive health screening with clear reporting and interpretation support.",
     price: "$18",
-    image: serviceLab,
+    image: Hpylori,
   },
   {
     name: "Blood Grouping",
     description: "Accurate blood group identification for clinical and family needs.",
     price: "$7",
-    image: labWide,
+    image: shopWide,
   },
   {
     name: "Home Sample Collection",
@@ -314,6 +320,12 @@ export const partners = [
   "CeraVe",
   "Yusra",
   "Health Partners Uganda",
+] as const;
+
+export const marketingVideos = [
+  { src: "/assets/videos/clip1.mp4", title: "Our Pharmacy Tour" },
+  { src: "/assets/videos/clip2.mp4", title: "Laboratory Services" },
+  { src: "/assets/videos/clip3.mp4", title: "Home Sample Collection" },
 ] as const;
 
 export const team = [
