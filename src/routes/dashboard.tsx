@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listProductCategories, listProducts, removeCategory, removeProduct, upsertCategory, upsertProduct } from "../lib/shop.functions";
+import { formatServiceType, readServices, writeServices, type ServiceItem, type ServiceType } from "../lib/services";
 
 type ProductItem = CatalogProduct;
 
@@ -24,6 +25,8 @@ type OrderItem = {
 type ProductForm = Omit<ProductItem, "id">;
 
 type CategoryForm = Omit<CategoryItem, "id">;
+
+type ServiceForm = { name: string; description: string; type: ServiceType };
 
 const defaultOrders: OrderItem[] = [
   {
@@ -88,21 +91,27 @@ function DashboardPage() {
   const deleteCategoryFn = useServerFn(removeCategory);
   const [products, setProducts] = useState<ProductItem[]>(() => readCatalogProducts());
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
+  const [services, setServices] = useState<ServiceItem[]>(() => readServices());
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
   const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
+  const [serviceForm, setServiceForm] = useState<ServiceForm>({ name: "", description: "", type: "inhouse" });
   const [productSearch, setProductSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [productSaving, setProductSaving] = useState(false);
   const [categorySaving, setCategorySaving] = useState(false);
+  const [serviceSaving, setServiceSaving] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -124,6 +133,10 @@ function DashboardPage() {
       window.localStorage.setItem("nuno-dashboard-categories", JSON.stringify(categories));
     }
   }, [products, categories]);
+
+  useEffect(() => {
+    writeServices(services);
+  }, [services]);
 
   useEffect(() => {
     writeStorage(storageKeys.orders, orders);
@@ -149,9 +162,10 @@ function DashboardPage() {
       { label: "Medicines", value: medicineCount, accent: "text-primary" },
       { label: "Perfumes", value: perfumeCount, accent: "text-gold" },
       { label: "Skincare", value: skincareCount, accent: "text-primary" },
+      { label: "Services", value: services.length, accent: "text-primary" },
       { label: "Orders", value: orders.length, accent: "text-foreground" },
     ];
-  }, [products, orders.length]);
+  }, [products, services.length, orders.length]);
 
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -246,6 +260,23 @@ function DashboardPage() {
       setCategoryForm({ name: "", description: "" });
     }
     setCategoryDialogOpen(true);
+  }
+
+  function resetServiceForm() {
+    setServiceForm({ name: "", description: "", type: "inhouse" });
+    setEditingServiceId(null);
+    setServiceDialogOpen(false);
+  }
+
+  function openServiceDialog(service?: ServiceItem) {
+    if (service) {
+      setEditingServiceId(service.id);
+      setServiceForm({ name: service.name, description: service.description, type: service.type });
+    } else {
+      setEditingServiceId(null);
+      setServiceForm({ name: "", description: "", type: "inhouse" });
+    }
+    setServiceDialogOpen(true);
   }
 
   async function handleSaveProduct(e: React.FormEvent) {
@@ -347,6 +378,57 @@ function DashboardPage() {
     } catch (error) {
       console.error("Failed to delete category", error);
       showFeedback("Could not delete the category. Please try again.", "error");
+    }
+  }
+
+  function handleSaveService(e: React.FormEvent) {
+    e.preventDefault();
+    if (!serviceForm.name.trim()) return;
+    setServiceSaving(true);
+    try {
+      const now = new Date().toISOString().slice(0, 10);
+      const savedService: ServiceItem = editingServiceId
+        ? {
+            id: editingServiceId,
+            name: serviceForm.name.trim(),
+            description: serviceForm.description.trim(),
+            type: serviceForm.type,
+            createdAt: services.find((service) => service.id === editingServiceId)?.createdAt ?? now,
+          }
+        : {
+            id: crypto.randomUUID(),
+            name: serviceForm.name.trim(),
+            description: serviceForm.description.trim(),
+            type: serviceForm.type,
+            createdAt: now,
+          };
+
+      setServices((prev) => {
+        if (editingServiceId) {
+          return prev.map((service) => (service.id === editingServiceId ? savedService : service));
+        }
+        return [savedService, ...prev];
+      });
+      resetServiceForm();
+      showFeedback(editingServiceId ? "Service updated successfully." : "Service created successfully.");
+    } catch (error) {
+      console.error("Failed to save service", error);
+      showFeedback("Could not save the service. Please try again.", "error");
+    } finally {
+      setServiceSaving(false);
+    }
+  }
+
+  function handleDeleteService(id: string) {
+    setDeletingServiceId(id);
+    try {
+      setServices((prev) => prev.filter((service) => service.id !== id));
+      showFeedback("Service deleted successfully.");
+    } catch (error) {
+      console.error("Failed to delete service", error);
+      showFeedback("Could not delete the service. Please try again.", "error");
+    } finally {
+      setDeletingServiceId(null);
     }
   }
 
@@ -536,6 +618,75 @@ function DashboardPage() {
           </Dialog>
 
           <section className="space-y-6">
+            <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-primary">
+                    <Package className="h-5 w-5" />
+                    <h2 className="font-display text-2xl font-semibold">Services</h2>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">Add clinic and at-home services that appear on the public Services page.</p>
+                </div>
+                <button onClick={() => openServiceDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+                  <Plus className="h-4 w-4" /> New service
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {services.map((service) => (
+                  <div key={service.id} className="rounded-2xl border border-border bg-background px-4 py-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{service.name}</h3>
+                          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{formatServiceType(service.type)}</span>
+                        </div>
+                        <p className="mt-2 text-sm text-muted-foreground">{service.description}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => openServiceDialog(service)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
+                          <PencilLine className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => handleDeleteService(service.id)} disabled={deletingServiceId === service.id} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                          {deletingServiceId === service.id ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : <Trash2 className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Dialog open={serviceDialogOpen} onOpenChange={(open) => (open ? setServiceDialogOpen(true) : resetServiceForm())}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingServiceId ? "Edit service" : "New service"}</DialogTitle>
+                  <DialogDescription>Create a service that should appear on the public Services page.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSaveService} className="mt-4 space-y-4">
+                  <label className="block text-sm font-medium">
+                    Service name
+                    <input value={serviceForm.name} onChange={(e) => setServiceForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Type
+                    <select value={serviceForm.type} onChange={(e) => setServiceForm((prev) => ({ ...prev, type: e.target.value as ServiceType }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3">
+                      <option value="inhouse">In-house</option>
+                      <option value="at-home">At home</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Description
+                    <textarea value={serviceForm.description} onChange={(e) => setServiceForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                  <DialogFooter>
+                    <button type="button" onClick={resetServiceForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+                    <button type="submit" disabled={serviceSaving} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">{serviceSaving ? (editingServiceId ? "Saving..." : "Creating...") : (editingServiceId ? "Save service" : "Create service")}</button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
             <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
               <div className="flex items-center justify-between gap-3">
                 <div>

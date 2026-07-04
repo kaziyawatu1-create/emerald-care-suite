@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SkincareRouteImport } from './routes/skincare'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
+import { Route as ServicesRouteImport } from './routes/services'
 import { Route as PharmacyRouteImport } from './routes/pharmacy'
 import { Route as PerfumesRouteImport } from './routes/perfumes'
+import { Route as OffersRouteImport } from './routes/offers'
 import { Route as LaboratoryRouteImport } from './routes/laboratory'
 import { Route as HomeServicesRouteImport } from './routes/home-services'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -41,6 +43,11 @@ const ShopRoute = ShopRouteImport.update({
   path: '/shop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServicesRoute = ServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PharmacyRoute = PharmacyRouteImport.update({
   id: '/pharmacy',
   path: '/pharmacy',
@@ -49,6 +56,11 @@ const PharmacyRoute = PharmacyRouteImport.update({
 const PerfumesRoute = PerfumesRouteImport.update({
   id: '/perfumes',
   path: '/perfumes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OffersRoute = OffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LaboratoryRoute = LaboratoryRouteImport.update({
@@ -116,8 +128,10 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/home-services': typeof HomeServicesRoute
   '/laboratory': typeof LaboratoryRoute
+  '/offers': typeof OffersRoute
   '/perfumes': typeof PerfumesRoute
   '/pharmacy': typeof PharmacyRoute
+  '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
@@ -134,8 +148,10 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/home-services': typeof HomeServicesRoute
   '/laboratory': typeof LaboratoryRoute
+  '/offers': typeof OffersRoute
   '/perfumes': typeof PerfumesRoute
   '/pharmacy': typeof PharmacyRoute
+  '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
@@ -153,8 +169,10 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/home-services': typeof HomeServicesRoute
   '/laboratory': typeof LaboratoryRoute
+  '/offers': typeof OffersRoute
   '/perfumes': typeof PerfumesRoute
   '/pharmacy': typeof PharmacyRoute
+  '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
@@ -173,8 +191,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/home-services'
     | '/laboratory'
+    | '/offers'
     | '/perfumes'
     | '/pharmacy'
+    | '/services'
     | '/shop'
     | '/sitemap.xml'
     | '/skincare'
@@ -191,8 +211,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/home-services'
     | '/laboratory'
+    | '/offers'
     | '/perfumes'
     | '/pharmacy'
+    | '/services'
     | '/shop'
     | '/sitemap.xml'
     | '/skincare'
@@ -209,8 +231,10 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/home-services'
     | '/laboratory'
+    | '/offers'
     | '/perfumes'
     | '/pharmacy'
+    | '/services'
     | '/shop'
     | '/sitemap.xml'
     | '/skincare'
@@ -228,8 +252,10 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   HomeServicesRoute: typeof HomeServicesRoute
   LaboratoryRoute: typeof LaboratoryRoute
+  OffersRoute: typeof OffersRoute
   PerfumesRoute: typeof PerfumesRoute
   PharmacyRoute: typeof PharmacyRoute
+  ServicesRoute: typeof ServicesRoute
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SkincareRoute: typeof SkincareRoute
@@ -261,6 +287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/services': {
+      id: '/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pharmacy': {
       id: '/pharmacy'
       path: '/pharmacy'
@@ -273,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/perfumes'
       fullPath: '/perfumes'
       preLoaderRoute: typeof PerfumesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offers': {
+      id: '/offers'
+      path: '/offers'
+      fullPath: '/offers'
+      preLoaderRoute: typeof OffersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/laboratory': {
@@ -364,8 +404,10 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   HomeServicesRoute: HomeServicesRoute,
   LaboratoryRoute: LaboratoryRoute,
+  OffersRoute: OffersRoute,
   PerfumesRoute: PerfumesRoute,
   PharmacyRoute: PharmacyRoute,
+  ServicesRoute: ServicesRoute,
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SkincareRoute: SkincareRoute,

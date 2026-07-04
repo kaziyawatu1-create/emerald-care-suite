@@ -1,18 +1,19 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, ShoppingBag, LayoutDashboard } from "lucide-react";
+import { Gift, Menu, ShoppingBag, UserRound, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
-import logoImage from "@/assets/Logo.png";
+import logoImage from "@/assets/LOGO.jpg";
 
 const links = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
-  { to: "/laboratory", label: "Laboratory" },
-  { to: "/pharmacy", label: "Pharmacy" },
-  { to: "/shop", label: "Shop" },
-  { to: "/skincare", label: "Skincare" },
-  { to: "/perfumes", label: "Perfumes" },
+  // { to: "/laboratory", label: "Laboratory" },
+  { to: "/shop", label: "Our Products" },
+  { to: "/services", label: "Services" },
   { to: "/contact", label: "Contact" },
+  // { to: "/pharmacy", label: "Pharmacy" },
+  // { to: "/skincare", label: "Skincare" },
+  // { to: "/perfumes", label: "Perfumes" },
 ] as const;
 
 export function Navbar() {
@@ -29,72 +30,77 @@ export function Navbar() {
 
   return (
     <header className={`sticky top-0 z-50 glass-nav transition-all ${scrolled ? "shadow-soft" : ""}`}>
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-8">
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <img
-            src={logoImage}
-            alt="Nuno Pharmacy logo"
-            className="h-10 w-10"
-          />
-          <span className="font-display text-lg font-bold tracking-tight">
-            <span className="text-primary"> Pharmacy</span>
-          </span>
-        </Link>
+      <div className="mx-auto max-w-7xl px-4 py-3 md:px-8">
+        <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
+          <Link to="/" className="flex items-center gap-2.5 group lg:min-w-60">
+            <img
+              src={logoImage}
+              alt="Nuno Pharmacy logo"
+              className="h-26 w-26 object-cover transition group-hover:scale-105"
+            />
+            <span className="font-display text-lg font-bold tracking-tight">
+              <span className="text-primary">Pharmacy</span>
+            </span>
+          </Link>
 
-        <nav className="hidden lg:flex items-center gap-1">
-          {links.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              activeOptions={{ exact: l.to === "/" }}
-              activeProps={{ className: "text-primary bg-primary/8" }}
-              inactiveProps={{ className: "text-foreground/75 hover:text-primary hover:bg-primary/5" }}
-              className="rounded-full px-3.5 py-2 text-sm font-medium transition-colors"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-end gap-2">
+              <Link
+                to="/offers"
+                aria-label="Offers"
+                className="grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"
+              >
+                <Gift className="h-4.5 w-4.5" />
+              </Link>
+              <Link
+                to="/dashboard"
+                aria-label="Sign in"
+                className="grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"
+              >
+                <UserRound className="h-4.5 w-4.5" />
+              </Link>
+              <Link
+                to="/cart"
+                aria-label="Cart"
+                className="relative grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"
+              >
+                <ShoppingBag className="h-4.5 w-4.5" />
+                {count > 0 && (
+                  <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                    {count}
+                  </span>
+                )}
+              </Link>
+              <button
+                aria-label="Toggle menu"
+                onClick={() => setOpen((v) => !v)}
+                className="lg:hidden grid h-10 w-10 place-items-center rounded-full border border-border bg-background"
+              >
+                {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+            </div>
 
-        <div className="flex items-center gap-2">
-          <Link
-            to="/cart"
-            aria-label="Cart"
-            className="relative grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"
-          >
-            <ShoppingBag className="h-4.5 w-4.5" />
-            {count > 0 && (
-              <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                {count}
-              </span>
-            )}
-          </Link>
-          <Link
-            to="/dashboard"
-            aria-label="Dashboard"
-            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"
-          >
-            <LayoutDashboard className="h-4.5 w-4.5" />
-          </Link>
-          <Link
-            to="/shop"
-            className="hidden md:inline-flex rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold font-display"
-          >
-            Shop Medicine
-          </Link>
-          <Link
-            to="/laboratory"
-            className="hidden md:inline-flex rounded-full border border-primary/20 bg-background/80 px-5 py-2.5 text-sm font-semibold font-display text-primary transition hover:bg-primary/5"
-          >
-            Book a Test
-          </Link>
-          <button
-            aria-label="Toggle menu"
-            onClick={() => setOpen((v) => !v)}
-            className="lg:hidden grid h-10 w-10 place-items-center rounded-full border border-border bg-background"
-          >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+            <nav className="hidden lg:flex items-center justify-end gap-1 flex-wrap">
+              {links.map((l) => (
+                <Link
+                  key={l.to}
+                  to={l.to}
+                  activeOptions={{ exact: l.to === "/" }}
+                  activeProps={{ className: "text-primary bg-primary/8" }}
+                  inactiveProps={{ className: "text-foreground/75 hover:text-primary hover:bg-primary/5" }}
+                  className="rounded-full px-3.5 py-2 text-sm font-medium transition-colors"
+                >
+                  {l.label}
+                </Link>
+              ))}
+              <Link
+                to="/laboratory"
+                className="rounded-full btn-gradient px-4 py-2.5 text-sm font-semibold font-display"
+              >
+                Book Appointment
+              </Link>
+            </nav>
+          </div>
         </div>
       </div>
 

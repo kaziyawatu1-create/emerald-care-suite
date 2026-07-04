@@ -75,11 +75,6 @@ function ShopPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Shop"
-        title="Medicine catalogue by category"
-        subtitle="Tap any medicine to add it to your cart. Checkout with M-Pesa STK Push or pay on delivery."
-      />
 
       <section className="section-pad">
         <div className="mx-auto max-w-7xl px-4 md:px-8">
