@@ -16,6 +16,7 @@ import { Footer } from "../components/site/Footer";
 import { FloatingWhatsApp } from "../components/site/FloatingWhatsApp";
 import { BackToTop } from "../components/site/BackToTop";
 import { CartProvider } from "../lib/cart";
+import { Toaster } from "sonner";
 
 function NotFoundComponent() {
   return (
@@ -122,6 +123,7 @@ function RootComponent() {
         </div>
         <FloatingWhatsApp />
         <BackToTop />
+        <Toaster position="top-right" richColors closeButton />
       </CartProvider>
     </QueryClientProvider>
   );
