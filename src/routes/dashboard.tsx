@@ -567,7 +567,9 @@ function DashboardPage() {
                   <textarea value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
                 </label>
                 <div className="flex gap-3">
-                  <button type="submit" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold">{editingCategoryId ? "Save category" : "Create category"}</button>
+                  <button type="submit" disabled={savingCategory} className="inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
+                    {savingCategory ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingCategoryId ? "Save category" : "Create category"}
+                  </button>
                   {editingCategoryId ? <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
                 </div>
               </form>
