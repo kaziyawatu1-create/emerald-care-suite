@@ -123,6 +123,7 @@ function RootComponent() {
         </div>
         <FloatingWhatsApp />
         <BackToTop />
+        <Toaster position="top-right" richColors closeButton />
       </CartProvider>
     </QueryClientProvider>
   );
