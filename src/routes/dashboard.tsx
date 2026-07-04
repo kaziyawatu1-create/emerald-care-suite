@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listProductCategories, listProducts, removeCategory, removeProduct, upsertCategory, upsertProduct } from "../lib/shop.functions";
 
@@ -88,11 +90,19 @@ function DashboardPage() {
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
   const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
   const [productSearch, setProductSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [productSaving, setProductSaving] = useState(false);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -180,19 +190,70 @@ function DashboardPage() {
 
   function resetProductForm() {
     setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
+    setSelectedImageFile(null);
     setEditingProductId(null);
+    setProductDialogOpen(false);
+  }
+
+  function openProductDialog(product?: ProductItem) {
+    if (product) {
+      setEditingProductId(product.id);
+      setSelectedImageFile(null);
+      setProductForm({
+        name: product.name,
+        category: product.category,
+        description: product.description,
+        price_kes: product.price_kes,
+        unit: product.unit,
+        requires_prescription: product.requires_prescription,
+        in_stock: product.in_stock,
+        image_url: product.image_url ?? null,
+      });
+    } else {
+      setEditingProductId(null);
+      setSelectedImageFile(null);
+      setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
+    }
+    setProductDialogOpen(true);
+  }
+
+  function showFeedback(message: string, type: "success" | "error" = "success") {
+    setFeedback({ type, message });
+    window.setTimeout(() => setFeedback((prev) => (prev?.message === message ? null : prev)), 3500);
+  }
+
+  function fileToDataUrl(file: File) {
+    return new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
   }
 
   function resetCategoryForm() {
     setCategoryForm({ name: "", description: "" });
     setEditingCategoryId(null);
+    setCategoryDialogOpen(false);
+  }
+
+  function openCategoryDialog(category?: CategoryItem) {
+    if (category) {
+      setEditingCategoryId(category.id);
+      setCategoryForm({ name: category.name, description: category.description });
+    } else {
+      setEditingCategoryId(null);
+      setCategoryForm({ name: "", description: "" });
+    }
+    setCategoryDialogOpen(true);
   }
 
   async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
     if (!productForm.name.trim() || !productForm.category.trim()) return;
-
+    setProductSaving(true);
     try {
+      const imageUrl = productForm.image_url ?? (selectedImageFile ? await fileToDataUrl(selectedImageFile) : null);
       const savedProduct = (await saveProductFn({
         data: {
           id: editingProductId ?? undefined,
@@ -203,9 +264,9 @@ function DashboardPage() {
           unit: productForm.unit,
           requires_prescription: productForm.requires_prescription,
           in_stock: productForm.in_stock,
-          image_url: productForm.image_url ?? null,
+          image_url: imageUrl ?? null,
         },
-      })) as ProductItem;
+      })) as unknown as ProductItem;
 
       setProducts((prev) => {
         if (editingProductId) {
@@ -214,29 +275,37 @@ function DashboardPage() {
         return [savedProduct, ...prev];
       });
       resetProductForm();
+      showFeedback(editingProductId ? "Product updated successfully." : "Product created successfully.");
     } catch (error) {
       console.error("Failed to save product", error);
+      showFeedback("Could not save the product. Please try again.", "error");
+    } finally {
+      setProductSaving(false);
     }
   }
 
   function handleEditProduct(product: ProductItem) {
-    setEditingProductId(product.id);
-    setProductForm({ name: product.name, category: product.category, description: product.description, price_kes: product.price_kes, unit: product.unit, requires_prescription: product.requires_prescription, in_stock: product.in_stock, image_url: product.image_url ?? null });
+    openProductDialog(product);
   }
 
   async function handleDeleteProduct(id: string) {
+    setDeletingProductId(id);
     try {
       await deleteProductFn({ data: { id } });
       setProducts((prev) => prev.filter((item) => item.id !== id));
+      showFeedback("Product deleted successfully.");
     } catch (error) {
       console.error("Failed to delete product", error);
+      showFeedback("Could not delete the product. Please try again.", "error");
+    } finally {
+      setDeletingProductId(null);
     }
   }
 
   async function handleSaveCategory(e: React.FormEvent) {
     e.preventDefault();
     if (!categoryForm.name.trim()) return;
-
+    setCategorySaving(true);
     try {
       const savedCategory = (await saveCategoryFn({
         data: {
@@ -244,7 +313,7 @@ function DashboardPage() {
           name: categoryForm.name,
           description: categoryForm.description,
         },
-      })) as CategoryItem;
+      })) as unknown as CategoryItem;
 
       setCategories((prev) => {
         if (editingCategoryId) {
@@ -253,14 +322,17 @@ function DashboardPage() {
         return [savedCategory, ...prev];
       });
       resetCategoryForm();
+      showFeedback(editingCategoryId ? "Category updated successfully." : "Category created successfully.");
     } catch (error) {
       console.error("Failed to save category", error);
+      showFeedback("Could not save the category. Please try again.", "error");
+    } finally {
+      setCategorySaving(false);
     }
   }
 
   function handleEditCategory(category: CategoryItem) {
-    setEditingCategoryId(category.id);
-    setCategoryForm({ name: category.name, description: category.description });
+    openCategoryDialog(category);
   }
 
   async function handleDeleteCategory(id: string) {
@@ -271,8 +343,10 @@ function DashboardPage() {
       if (deletedCategoryName) {
         setProducts((prev) => prev.map((item) => (item.category === deletedCategoryName ? { ...item, category: "Uncategorized" } : item)));
       }
+      showFeedback("Category deleted successfully.");
     } catch (error) {
       console.error("Failed to delete category", error);
+      showFeedback("Could not delete the category. Please try again.", "error");
     }
   }
 
@@ -330,6 +404,15 @@ function DashboardPage() {
           </button>
         </div>
 
+        {feedback ? (
+          <div className="fixed right-4 top-4 z-50 w-80">
+            <Alert className={feedback.type === "error" ? "border-destructive/40 bg-destructive/10" : "border-primary/30 bg-primary/10"}>
+              <AlertTitle>{feedback.type === "error" ? "Action failed" : "Success"}</AlertTitle>
+              <AlertDescription>{feedback.message}</AlertDescription>
+            </Alert>
+          </div>
+        ) : null}
+
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
             <div key={stat.label} className="rounded-4xl border border-border bg-card p-5 shadow-soft">
@@ -349,62 +432,10 @@ function DashboardPage() {
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">Add, edit, and remove products for the shop.</p>
               </div>
-              <button onClick={resetProductForm} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+              <button onClick={() => openProductDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
                 <Plus className="h-4 w-4" /> New product
               </button>
             </div>
-
-            <form onSubmit={handleSaveProduct} className="mt-6 grid gap-4 md:grid-cols-2">
-              <label className="text-sm font-medium md:col-span-2">
-                Product name
-                <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <label className="text-sm font-medium">
-                Category
-                <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
-                  <option value="">Select category</option>
-                  {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
-                  <option value="Uncategorized">Uncategorized</option>
-                </select>
-              </label>
-              <label className="text-sm font-medium">
-                Price (KES)
-                <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
-              </label>
-              <label className="text-sm font-medium">
-                Unit
-                <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <label className="text-sm font-medium md:col-span-2">
-                Description
-                <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-              </label>
-              {/(skincare|perfumes)/i.test(productForm.category) ? (
-                <label className="text-sm font-medium md:col-span-2">
-                  Product image
-                  <input type="file" accept="image/*" onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => setProductForm((prev) => ({ ...prev, image_url: typeof reader.result === "string" ? reader.result : null }));
-                    reader.readAsDataURL(file);
-                  }} className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                  {productForm.image_url ? <img src={productForm.image_url} alt="Preview" className="mt-3 h-24 w-full rounded-2xl object-cover" /> : null}
-                </label>
-              ) : null}
-              <label className="flex items-center gap-3 text-sm font-medium">
-                <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
-                Requires prescription
-              </label>
-              <label className="flex items-center gap-3 text-sm font-medium">
-                <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
-                In stock
-              </label>
-              <div className="md:col-span-2 flex gap-3">
-                <button type="submit" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold">{editingProductId ? "Save product" : "Create product"}</button>
-                {editingProductId ? <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
-              </div>
-            </form>
 
             <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
               <Search className="h-4 w-4 text-primary" />
@@ -428,17 +459,81 @@ function DashboardPage() {
                     <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(product.price_kes)} · {product.unit} · {product.in_stock ? "In stock" : "Out of stock"} · {product.requires_prescription ? "Rx" : "OTC"}</p>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleEditProduct(product)} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
+                    <button onClick={() => openProductDialog(product)} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
                       <PencilLine className="h-4 w-4" /> Edit
                     </button>
-                    <button onClick={() => handleDeleteProduct(product.id)} className="inline-flex items-center gap-2 rounded-full border border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10">
-                      <Trash2 className="h-4 w-4" /> Delete
+                    <button onClick={() => handleDeleteProduct(product.id)} disabled={deletingProductId === product.id} className="inline-flex items-center gap-2 rounded-full border border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                      {deletingProductId === product.id ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : <Trash2 className="h-4 w-4" /> } Delete
                     </button>
                   </div>
                 </div>
               ))}
             </div>
           </section>
+
+          <Dialog open={productDialogOpen} onOpenChange={(open) => (open ? setProductDialogOpen(true) : resetProductForm())}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingProductId ? "Edit product" : "New product"}</DialogTitle>
+                <DialogDescription>Manage a shop product and save it to your inventory.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSaveProduct} className="mt-4 grid gap-4 md:grid-cols-2">
+                <label className="text-sm font-medium md:col-span-2">
+                  Product name
+                  <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                </label>
+                <label className="text-sm font-medium">
+                  Category
+                  <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
+                    <option value="">Select category</option>
+                    {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
+                    <option value="Uncategorized">Uncategorized</option>
+                  </select>
+                </label>
+                <label className="text-sm font-medium">
+                  Price (KES)
+                  <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
+                </label>
+                <label className="text-sm font-medium">
+                  Unit
+                  <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                </label>
+                <label className="text-sm font-medium md:col-span-2">
+                  Description
+                  <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                </label>
+                {/(skincare|perfumes)/i.test(productForm.category) ? (
+                  <label className="text-sm font-medium md:col-span-2">
+                    Product image
+                    <input type="file" accept="image/*" onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file) return;
+                      setSelectedImageFile(file);
+                      const reader = new FileReader();
+                      reader.onload = () => setProductForm((prev) => ({ ...prev, image_url: typeof reader.result === "string" ? reader.result : null }));
+                      reader.readAsDataURL(file);
+                    }} className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                    {productForm.image_url ? <img src={productForm.image_url} alt="Preview" className="mt-3 h-24 w-full rounded-2xl object-cover" /> : null}
+                  </label>
+                ) : null}
+                <label className="flex items-center gap-3 text-sm font-medium">
+                  <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
+                  Requires prescription
+                </label>
+                <label className="flex items-center gap-3 text-sm font-medium">
+                  <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
+                  In stock
+                </label>
+                <DialogFooter className="md:col-span-2">
+                  <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+                  <button type="submit" disabled={productSaving} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                    {productSaving ? <svg className="inline-block h-4 w-4 animate-spin align-middle" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : null}
+                    <span className="align-middle">{editingProductId ? (productSaving ? "Saving..." : "Save product") : (productSaving ? "Creating..." : "Create product")}</span>
+                  </button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           <section className="space-y-6">
             <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
@@ -450,25 +545,10 @@ function DashboardPage() {
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">Group products by category.</p>
                 </div>
-                <button onClick={resetCategoryForm} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+                <button onClick={() => openCategoryDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
                   <Plus className="h-4 w-4" /> New
                 </button>
               </div>
-
-              <form onSubmit={handleSaveCategory} className="mt-6 space-y-4">
-                <label className="block text-sm font-medium">
-                  Category name
-                  <input value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                </label>
-                <label className="block text-sm font-medium">
-                  Description
-                  <textarea value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                </label>
-                <div className="flex gap-3">
-                  <button type="submit" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold">{editingCategoryId ? "Save category" : "Create category"}</button>
-                  {editingCategoryId ? <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
-                </div>
-              </form>
 
               <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
                 <Search className="h-4 w-4 text-primary" />
@@ -489,11 +569,11 @@ function DashboardPage() {
                         <p className="mt-1 text-sm text-muted-foreground">{category.description}</p>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => handleEditCategory(category)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
+                        <button onClick={() => openCategoryDialog(category)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
                           <PencilLine className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleDeleteCategory(category.id)} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10">
-                          <Trash2 className="h-4 w-4" />
+                        <button onClick={() => handleDeleteCategory(category.id)} disabled={deletingCategoryId === category.id} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                          {deletingCategoryId === category.id ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : <Trash2 className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
@@ -501,6 +581,29 @@ function DashboardPage() {
                 ))}
               </div>
             </div>
+
+            <Dialog open={categoryDialogOpen} onOpenChange={(open) => (open ? setCategoryDialogOpen(true) : resetCategoryForm())}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingCategoryId ? "Edit category" : "New category"}</DialogTitle>
+                  <DialogDescription>Manage the product category name and description.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSaveCategory} className="mt-4 space-y-4">
+                  <label className="block text-sm font-medium">
+                    Category name
+                    <input value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Description
+                    <textarea value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                  </label>
+                  <DialogFooter>
+                    <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+                    <button type="submit" disabled={categorySaving} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">{categorySaving ? (editingCategoryId ? "Saving..." : "Creating...") : (editingCategoryId ? "Save category" : "Create category")}</button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
 
             <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
               <div className="flex items-center gap-2 text-primary">

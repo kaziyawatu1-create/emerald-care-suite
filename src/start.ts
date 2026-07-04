@@ -22,3 +22,13 @@ export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
   requestMiddleware: [errorMiddleware],
 }));
+
+// Global process-level handlers to capture unexpected exceptions during dev
+if (typeof process !== 'undefined' && process && typeof process.on === 'function') {
+  process.on('uncaughtException', (err) => {
+    console.error('uncaughtException', err instanceof Error ? err.stack ?? err.message : err);
+  });
+  process.on('unhandledRejection', (reason) => {
+    console.error('unhandledRejection', reason instanceof Error ? reason.stack ?? reason.message : reason);
+  });
+}
