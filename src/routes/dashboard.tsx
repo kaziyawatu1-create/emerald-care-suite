@@ -207,8 +207,12 @@ function DashboardPage() {
 
   async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
-    if (!productForm.name.trim() || !productForm.category.trim()) return;
+    if (!productForm.name.trim() || !productForm.category.trim()) {
+      toast.error("Please fill in product name and category.");
+      return;
+    }
 
+    setSavingProduct(true);
     try {
       const savedProduct = (await saveProductFn({
         data: {
@@ -231,8 +235,12 @@ function DashboardPage() {
         return [savedProduct, ...prev];
       });
       resetProductForm();
+      toast.success(editingProductId ? "Product updated" : "Product created");
     } catch (error) {
       console.error("Failed to save product", error);
+      toast.error(`Could not save product: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setSavingProduct(false);
     }
   }
 
@@ -242,18 +250,51 @@ function DashboardPage() {
   }
 
   async function handleDeleteProduct(id: string) {
+    if (!window.confirm("Delete this product? This cannot be undone.")) return;
+    setDeletingId(id);
     try {
       await deleteProductFn({ data: { id } });
       setProducts((prev) => prev.filter((item) => item.id !== id));
+      toast.success("Product deleted");
     } catch (error) {
       console.error("Failed to delete product", error);
+      toast.error(`Could not delete product: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleProductImageChange(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image is too large. Please pick one under 2MB.");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
+        reader.readAsDataURL(file);
+      });
+      setProductForm((prev) => ({ ...prev, image_url: dataUrl }));
+      toast.success("Image ready. Save the product to keep it.");
+    } catch (error) {
+      toast.error(`Could not read image: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setUploadingImage(false);
     }
   }
 
   async function handleSaveCategory(e: React.FormEvent) {
     e.preventDefault();
-    if (!categoryForm.name.trim()) return;
+    if (!categoryForm.name.trim()) {
+      toast.error("Please enter a category name.");
+      return;
+    }
 
+    setSavingCategory(true);
     try {
       const savedCategory = (await saveCategoryFn({
         data: {
@@ -270,8 +311,12 @@ function DashboardPage() {
         return [savedCategory, ...prev];
       });
       resetCategoryForm();
+      toast.success(editingCategoryId ? "Category updated" : "Category created");
     } catch (error) {
       console.error("Failed to save category", error);
+      toast.error(`Could not save category: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setSavingCategory(false);
     }
   }
 
@@ -281,17 +326,24 @@ function DashboardPage() {
   }
 
   async function handleDeleteCategory(id: string) {
+    if (!window.confirm("Delete this category? Products in it will move to Uncategorized.")) return;
     const deletedCategoryName = categories.find((c) => c.id === id)?.name;
+    setDeletingId(id);
     try {
       await deleteCategoryFn({ data: { id } });
       setCategories((prev) => prev.filter((item) => item.id !== id));
       if (deletedCategoryName) {
         setProducts((prev) => prev.map((item) => (item.category === deletedCategoryName ? { ...item, category: "Uncategorized" } : item)));
       }
+      toast.success("Category deleted");
     } catch (error) {
       console.error("Failed to delete category", error);
+      toast.error(`Could not delete category: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setDeletingId(null);
     }
   }
+
 
   if (!isLoggedIn) {
     return (
