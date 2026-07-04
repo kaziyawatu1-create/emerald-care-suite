@@ -596,8 +596,8 @@ function DashboardPage() {
                         <button onClick={() => handleEditCategory(category)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
                           <PencilLine className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleDeleteCategory(category.id)} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10">
-                          <Trash2 className="h-4 w-4" />
+                        <button onClick={() => handleDeleteCategory(category.id)} disabled={deletingId === category.id} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                          {deletingId === category.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
