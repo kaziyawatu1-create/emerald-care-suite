@@ -16,6 +16,7 @@ import { Footer } from "../components/site/Footer";
 import { FloatingWhatsApp } from "../components/site/FloatingWhatsApp";
 import { BackToTop } from "../components/site/BackToTop";
 import { CartProvider } from "../lib/cart";
+import { Toaster } from "sonner";
 
 function NotFoundComponent() {
   return (
@@ -70,13 +71,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Nuno Pharmacy — Wellness Starts Here" },
-      { name: "description", content: "Genuine medicines, certified laboratory testing, skincare, vitamins and Dubai perfumes. Professional pharmaceutical care for individuals, families, and businesses." },
+      { title: "Nuno Pharmacy | Premium Pharmacy & Laboratory" },
+      { name: "description", content: "Nuno Pharmacy offers genuine medicines, certified laboratory testing, skincare, vitamins, perfumes and home healthcare services." },
       { name: "author", content: "Nuno Pharmacy" },
-      { property: "og:title", content: "Nuno Pharmacy — Wellness Starts Here" },
-      { property: "og:description", content: "Quality Medicines. Reliable Laboratory Services. Professional Healthcare." },
+      { property: "og:title", content: "Nuno Pharmacy | Premium Pharmacy & Laboratory" },
+      { property: "og:description", content: "Nuno Pharmacy offers genuine medicines, certified laboratory testing, skincare, vitamins, perfumes and home healthcare services." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Nuno Pharmacy | Premium Pharmacy & Laboratory" },
+      { name: "twitter:description", content: "Nuno Pharmacy offers genuine medicines, certified laboratory testing, skincare, vitamins, perfumes and home healthcare services." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/b6539c4e-23e5-461c-a0e6-a8d2e4c80777" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/b6539c4e-23e5-461c-a0e6-a8d2e4c80777" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -122,6 +127,7 @@ function RootComponent() {
         </div>
         <FloatingWhatsApp />
         <BackToTop />
+        <Toaster position="top-right" richColors closeButton />
       </CartProvider>
     </QueryClientProvider>
   );

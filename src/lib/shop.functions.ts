@@ -155,6 +155,7 @@ export const removeCategory = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+
 const cartItemSchema = z.object({
   id: z.string().uuid(),
   quantity: z.number().int().min(1).max(50),

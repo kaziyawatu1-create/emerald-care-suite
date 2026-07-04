@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listProductCategories, listProducts, removeCategory, removeProduct, upsertCategory, upsertProduct } from "../lib/shop.functions";
 import { formatServiceType, readServices, writeServices, type ServiceItem, type ServiceType } from "../lib/services";
+
 
 type ProductItem = CatalogProduct;
 
@@ -101,17 +101,11 @@ function DashboardPage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
-  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
-  const [productDialogOpen, setProductDialogOpen] = useState(false);
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [productSaving, setProductSaving] = useState(false);
-  const [categorySaving, setCategorySaving] = useState(false);
-  const [serviceSaving, setServiceSaving] = useState(false);
-  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
-  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
-  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -187,20 +181,30 @@ function DashboardPage() {
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (email.trim().toLowerCase() === adminEmail.toLowerCase() && password === adminPassword) {
-      setIsLoggedIn(true);
-      setError("");
-      writeStorage(storageKeys.session, { email: email.trim() });
-      return;
-    }
-    setError("Invalid admin credentials. Try the default admin login details.");
+    setLoginLoading(true);
+    setError("");
+    // brief delay for UX feedback
+    setTimeout(() => {
+      if (email.trim().toLowerCase() === adminEmail.toLowerCase() && password === adminPassword) {
+        setIsLoggedIn(true);
+        writeStorage(storageKeys.session, { email: email.trim() });
+        toast.success("Welcome back, admin!");
+      } else {
+        const msg = "Invalid admin credentials. Use the demo login shown on this page.";
+        setError(msg);
+        toast.error(msg);
+      }
+      setLoginLoading(false);
+    }, 400);
   }
 
   function handleLogout() {
     setIsLoggedIn(false);
     setPassword("");
     writeStorage(storageKeys.session, null);
+    toast.success("Signed out");
   }
+
 
   function resetProductForm() {
     setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
@@ -281,8 +285,12 @@ function DashboardPage() {
 
   async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
-    if (!productForm.name.trim() || !productForm.category.trim()) return;
-    setProductSaving(true);
+    if (!productForm.name.trim() || !productForm.category.trim()) {
+      toast.error("Please fill in product name and category.");
+      return;
+    }
+
+    setSavingProduct(true);
     try {
       const imageUrl = productForm.image_url ?? (selectedImageFile ? await fileToDataUrl(selectedImageFile) : null);
       const savedProduct = (await saveProductFn({
@@ -306,12 +314,12 @@ function DashboardPage() {
         return [savedProduct, ...prev];
       });
       resetProductForm();
-      showFeedback(editingProductId ? "Product updated successfully." : "Product created successfully.");
+      toast.success(editingProductId ? "Product updated" : "Product created");
     } catch (error) {
       console.error("Failed to save product", error);
-      showFeedback("Could not save the product. Please try again.", "error");
+      toast.error(`Could not save product: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
-      setProductSaving(false);
+      setSavingProduct(false);
     }
   }
 
@@ -320,23 +328,51 @@ function DashboardPage() {
   }
 
   async function handleDeleteProduct(id: string) {
-    setDeletingProductId(id);
+    if (!window.confirm("Delete this product? This cannot be undone.")) return;
+    setDeletingId(id);
     try {
       await deleteProductFn({ data: { id } });
       setProducts((prev) => prev.filter((item) => item.id !== id));
-      showFeedback("Product deleted successfully.");
+      toast.success("Product deleted");
     } catch (error) {
       console.error("Failed to delete product", error);
-      showFeedback("Could not delete the product. Please try again.", "error");
+      toast.error(`Could not delete product: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
-      setDeletingProductId(null);
+      setDeletingId(null);
+    }
+  }
+
+  async function handleProductImageChange(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image is too large. Please pick one under 2MB.");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
+        reader.readAsDataURL(file);
+      });
+      setProductForm((prev) => ({ ...prev, image_url: dataUrl }));
+      toast.success("Image ready. Save the product to keep it.");
+    } catch (error) {
+      toast.error(`Could not read image: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setUploadingImage(false);
     }
   }
 
   async function handleSaveCategory(e: React.FormEvent) {
     e.preventDefault();
-    if (!categoryForm.name.trim()) return;
-    setCategorySaving(true);
+    if (!categoryForm.name.trim()) {
+      toast.error("Please enter a category name.");
+      return;
+    }
+
+    setSavingCategory(true);
     try {
       const savedCategory = (await saveCategoryFn({
         data: {
@@ -353,12 +389,12 @@ function DashboardPage() {
         return [savedCategory, ...prev];
       });
       resetCategoryForm();
-      showFeedback(editingCategoryId ? "Category updated successfully." : "Category created successfully.");
+      toast.success(editingCategoryId ? "Category updated" : "Category created");
     } catch (error) {
       console.error("Failed to save category", error);
-      showFeedback("Could not save the category. Please try again.", "error");
+      toast.error(`Could not save category: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
-      setCategorySaving(false);
+      setSavingCategory(false);
     }
   }
 
@@ -367,70 +403,24 @@ function DashboardPage() {
   }
 
   async function handleDeleteCategory(id: string) {
+    if (!window.confirm("Delete this category? Products in it will move to Uncategorized.")) return;
     const deletedCategoryName = categories.find((c) => c.id === id)?.name;
+    setDeletingId(id);
     try {
       await deleteCategoryFn({ data: { id } });
       setCategories((prev) => prev.filter((item) => item.id !== id));
       if (deletedCategoryName) {
         setProducts((prev) => prev.map((item) => (item.category === deletedCategoryName ? { ...item, category: "Uncategorized" } : item)));
       }
-      showFeedback("Category deleted successfully.");
+      toast.success("Category deleted");
     } catch (error) {
       console.error("Failed to delete category", error);
-      showFeedback("Could not delete the category. Please try again.", "error");
-    }
-  }
-
-  function handleSaveService(e: React.FormEvent) {
-    e.preventDefault();
-    if (!serviceForm.name.trim()) return;
-    setServiceSaving(true);
-    try {
-      const now = new Date().toISOString().slice(0, 10);
-      const savedService: ServiceItem = editingServiceId
-        ? {
-            id: editingServiceId,
-            name: serviceForm.name.trim(),
-            description: serviceForm.description.trim(),
-            type: serviceForm.type,
-            createdAt: services.find((service) => service.id === editingServiceId)?.createdAt ?? now,
-          }
-        : {
-            id: crypto.randomUUID(),
-            name: serviceForm.name.trim(),
-            description: serviceForm.description.trim(),
-            type: serviceForm.type,
-            createdAt: now,
-          };
-
-      setServices((prev) => {
-        if (editingServiceId) {
-          return prev.map((service) => (service.id === editingServiceId ? savedService : service));
-        }
-        return [savedService, ...prev];
-      });
-      resetServiceForm();
-      showFeedback(editingServiceId ? "Service updated successfully." : "Service created successfully.");
-    } catch (error) {
-      console.error("Failed to save service", error);
-      showFeedback("Could not save the service. Please try again.", "error");
+      toast.error(`Could not delete category: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
-      setServiceSaving(false);
+      setDeletingId(null);
     }
   }
 
-  function handleDeleteService(id: string) {
-    setDeletingServiceId(id);
-    try {
-      setServices((prev) => prev.filter((service) => service.id !== id));
-      showFeedback("Service deleted successfully.");
-    } catch (error) {
-      console.error("Failed to delete service", error);
-      showFeedback("Could not delete the service. Please try again.", "error");
-    } finally {
-      setDeletingServiceId(null);
-    }
-  }
 
   if (!isLoggedIn) {
     return (
@@ -461,8 +451,15 @@ function DashboardPage() {
                 <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none ring-0 focus:border-primary" />
               </label>
             </div>
-            {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
-            <button type="submit" className="mt-6 inline-flex rounded-full btn-gradient px-6 py-3 text-sm font-semibold">Log in to dashboard</button>
+            {error ? (
+              <div role="alert" className="mt-4 flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            ) : null}
+            <button type="submit" disabled={loginLoading} className="mt-6 inline-flex items-center gap-2 rounded-full btn-gradient px-6 py-3 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
+              {loginLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</> : "Log in to dashboard"}
+            </button>
             <Link to="/" className="mt-4 block text-sm text-primary hover:underline">Back to the site</Link>
           </form>
         </div>
@@ -519,6 +516,75 @@ function DashboardPage() {
               </button>
             </div>
 
+            <form onSubmit={handleSaveProduct} className="mt-6 grid gap-4 md:grid-cols-2">
+              <label className="text-sm font-medium md:col-span-2">
+                Product name
+                <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+              </label>
+              <label className="text-sm font-medium">
+                Category
+                <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
+                  <option value="">Select category</option>
+                  {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
+                  <option value="Uncategorized">Uncategorized</option>
+                </select>
+              </label>
+              <label className="text-sm font-medium">
+                Price (KES)
+                <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
+              </label>
+              <label className="text-sm font-medium">
+                Unit
+                <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+              </label>
+              <label className="text-sm font-medium md:col-span-2">
+                Description
+                <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+              </label>
+              <div className="text-sm font-medium md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-primary" /> Product image
+                </label>
+                <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-background p-4 sm:flex-row sm:items-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingImage}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      handleProductImageChange(file);
+                      event.target.value = "";
+                    }}
+                    className="block w-full text-sm"
+                  />
+                  {uploadingImage ? (
+                    <span className="inline-flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</span>
+                  ) : null}
+                  {productForm.image_url ? (
+                    <div className="flex items-center gap-3">
+                      <img src={productForm.image_url} alt="Preview" className="h-16 w-16 rounded-xl object-cover" />
+                      <button type="button" onClick={() => setProductForm((prev) => ({ ...prev, image_url: null }))} className="text-xs font-semibold text-destructive hover:underline">Remove</button>
+                    </div>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Optional. PNG or JPG up to 2MB.</p>
+              </div>
+              <label className="flex items-center gap-3 text-sm font-medium">
+                <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
+                Requires prescription
+              </label>
+              <label className="flex items-center gap-3 text-sm font-medium">
+                <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
+                In stock
+              </label>
+              <div className="md:col-span-2 flex gap-3">
+                <button type="submit" disabled={savingProduct} className="inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
+                  {savingProduct ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingProductId ? "Save product" : "Create product"}
+                </button>
+                {editingProductId ? <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
+              </div>
+            </form>
+
             <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
               <Search className="h-4 w-4 text-primary" />
               <input
@@ -532,20 +598,29 @@ function DashboardPage() {
             <div className="mt-6 space-y-3">
               {filteredProducts.map((product) => (
                 <div key={product.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{product.name}</h3>
-                      <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{product.category}</span>
+                  <div className="flex items-start gap-3">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="h-16 w-16 flex-shrink-0 rounded-xl object-cover" />
+                    ) : (
+                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                        <ImageIcon className="h-5 w-5" />
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold">{product.name}</h3>
+                        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{product.category}</span>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">{product.description}</p>
+                      <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(product.price_kes)} · {product.unit} · {product.in_stock ? "In stock" : "Out of stock"} · {product.requires_prescription ? "Rx" : "OTC"}</p>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{product.description}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(product.price_kes)} · {product.unit} · {product.in_stock ? "In stock" : "Out of stock"} · {product.requires_prescription ? "Rx" : "OTC"}</p>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => openProductDialog(product)} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
                       <PencilLine className="h-4 w-4" /> Edit
                     </button>
-                    <button onClick={() => handleDeleteProduct(product.id)} disabled={deletingProductId === product.id} className="inline-flex items-center gap-2 rounded-full border border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60">
-                      {deletingProductId === product.id ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : <Trash2 className="h-4 w-4" /> } Delete
+                    <button onClick={() => handleDeleteProduct(product.id)} disabled={deletingId === product.id} className="inline-flex items-center gap-2 rounded-full border border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                      {deletingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
                     </button>
                   </div>
                 </div>
@@ -701,6 +776,23 @@ function DashboardPage() {
                 </button>
               </div>
 
+              <form onSubmit={handleSaveCategory} className="mt-6 space-y-4">
+                <label className="block text-sm font-medium">
+                  Category name
+                  <input value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                </label>
+                <label className="block text-sm font-medium">
+                  Description
+                  <textarea value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                </label>
+                <div className="flex gap-3">
+                  <button type="submit" disabled={savingCategory} className="inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
+                    {savingCategory ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingCategoryId ? "Save category" : "Create category"}
+                  </button>
+                  {editingCategoryId ? <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
+                </div>
+              </form>
+
               <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
                 <Search className="h-4 w-4 text-primary" />
                 <input
@@ -723,8 +815,8 @@ function DashboardPage() {
                         <button onClick={() => openCategoryDialog(category)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
                           <PencilLine className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleDeleteCategory(category.id)} disabled={deletingCategoryId === category.id} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 disabled:opacity-60">
-                          {deletingCategoryId === category.id ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : <Trash2 className="h-4 w-4" />}
+                        <button onClick={() => handleDeleteCategory(category.id)} disabled={deletingId === category.id} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                          {deletingId === category.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
