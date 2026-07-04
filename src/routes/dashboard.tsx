@@ -374,8 +374,15 @@ function DashboardPage() {
                 <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none ring-0 focus:border-primary" />
               </label>
             </div>
-            {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
-            <button type="submit" className="mt-6 inline-flex rounded-full btn-gradient px-6 py-3 text-sm font-semibold">Log in to dashboard</button>
+            {error ? (
+              <div role="alert" className="mt-4 flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            ) : null}
+            <button type="submit" disabled={loginLoading} className="mt-6 inline-flex items-center gap-2 rounded-full btn-gradient px-6 py-3 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
+              {loginLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</> : "Log in to dashboard"}
+            </button>
             <Link to="/" className="mt-4 block text-sm text-primary hover:underline">Back to the site</Link>
           </form>
         </div>
