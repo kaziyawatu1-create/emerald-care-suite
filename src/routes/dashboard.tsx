@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search } from "lucide-react";
+import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listProductCategories, listProducts, removeCategory, removeProduct, upsertCategory, upsertProduct } from "../lib/shop.functions";
+
 
 type ProductItem = CatalogProduct;
 
