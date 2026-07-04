@@ -170,20 +170,30 @@ function DashboardPage() {
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (email.trim().toLowerCase() === adminEmail.toLowerCase() && password === adminPassword) {
-      setIsLoggedIn(true);
-      setError("");
-      writeStorage(storageKeys.session, { email: email.trim() });
-      return;
-    }
-    setError("Invalid admin credentials. Try the default admin login details.");
+    setLoginLoading(true);
+    setError("");
+    // brief delay for UX feedback
+    setTimeout(() => {
+      if (email.trim().toLowerCase() === adminEmail.toLowerCase() && password === adminPassword) {
+        setIsLoggedIn(true);
+        writeStorage(storageKeys.session, { email: email.trim() });
+        toast.success("Welcome back, admin!");
+      } else {
+        const msg = "Invalid admin credentials. Use the demo login shown on this page.";
+        setError(msg);
+        toast.error(msg);
+      }
+      setLoginLoading(false);
+    }, 400);
   }
 
   function handleLogout() {
     setIsLoggedIn(false);
     setPassword("");
     writeStorage(storageKeys.session, null);
+    toast.success("Signed out");
   }
+
 
   function resetProductForm() {
     setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
