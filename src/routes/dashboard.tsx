@@ -95,6 +95,11 @@ function DashboardPage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     const loadCatalog = async () => {
