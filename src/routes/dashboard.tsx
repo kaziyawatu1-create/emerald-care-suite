@@ -455,19 +455,34 @@ function DashboardPage() {
                 Description
                 <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
               </label>
-              {/(skincare|perfumes)/i.test(productForm.category) ? (
-                <label className="text-sm font-medium md:col-span-2">
-                  Product image
-                  <input type="file" accept="image/*" onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => setProductForm((prev) => ({ ...prev, image_url: typeof reader.result === "string" ? reader.result : null }));
-                    reader.readAsDataURL(file);
-                  }} className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                  {productForm.image_url ? <img src={productForm.image_url} alt="Preview" className="mt-3 h-24 w-full rounded-2xl object-cover" /> : null}
+              <div className="text-sm font-medium md:col-span-2">
+                <label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-primary" /> Product image
                 </label>
-              ) : null}
+                <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-background p-4 sm:flex-row sm:items-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingImage}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      handleProductImageChange(file);
+                      event.target.value = "";
+                    }}
+                    className="block w-full text-sm"
+                  />
+                  {uploadingImage ? (
+                    <span className="inline-flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</span>
+                  ) : null}
+                  {productForm.image_url ? (
+                    <div className="flex items-center gap-3">
+                      <img src={productForm.image_url} alt="Preview" className="h-16 w-16 rounded-xl object-cover" />
+                      <button type="button" onClick={() => setProductForm((prev) => ({ ...prev, image_url: null }))} className="text-xs font-semibold text-destructive hover:underline">Remove</button>
+                    </div>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Optional. PNG or JPG up to 2MB.</p>
+              </div>
               <label className="flex items-center gap-3 text-sm font-medium">
                 <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
                 Requires prescription
@@ -477,7 +492,9 @@ function DashboardPage() {
                 In stock
               </label>
               <div className="md:col-span-2 flex gap-3">
-                <button type="submit" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold">{editingProductId ? "Save product" : "Create product"}</button>
+                <button type="submit" disabled={savingProduct} className="inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
+                  {savingProduct ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingProductId ? "Save product" : "Create product"}
+                </button>
                 {editingProductId ? <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
               </div>
             </form>
