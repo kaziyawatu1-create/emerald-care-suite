@@ -53,6 +53,7 @@ const productInputSchema = z.object({
 export const upsertProduct = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => productInputSchema.parse(input))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const payload = {
       id: data.id,
       name: data.name,
@@ -78,6 +79,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
 export const upsertCategory = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid().optional(), name: z.string().min(1).max(80), description: z.string().max(500).optional().default("") }).parse(input))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const payload = { id: data.id, name: data.name, description: data.description ?? "" };
     const { data: saved, error } = await supabaseAdmin.from("product_categories").upsert(payload, { onConflict: "id" }).select("id,name,description").single();
     if (error) throw new Error(error.message);
@@ -87,6 +89,7 @@ export const upsertCategory = createServerFn({ method: "POST" })
 export const removeProduct = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("products").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { success: true };
@@ -95,6 +98,7 @@ export const removeProduct = createServerFn({ method: "POST" })
 export const removeCategory = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: category, error: categoryError } = await supabaseAdmin.from("product_categories").select("name").eq("id", data.id).maybeSingle();
     if (categoryError) throw new Error(categoryError.message);
     if (category?.name) {
@@ -104,6 +108,7 @@ export const removeCategory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
 
 const cartItemSchema = z.object({
   id: z.string().uuid(),
