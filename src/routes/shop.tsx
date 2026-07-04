@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Plus, Check, ShoppingBag, AlertCircle } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
+import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
@@ -19,20 +20,13 @@ export const Route = createFileRoute("/shop")({
   component: ShopPage,
 });
 
-type Product = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  price_kes: number | string;
-  unit: string;
-  requires_prescription: boolean;
-  in_stock: boolean;
-};
+type Product = CatalogProduct;
 
 function ShopPage() {
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>(() => readCatalogProducts());
+  const [catalogCategories, setCatalogCategories] = useState<CatalogCategory[]>(() => readCatalogCategories());
   const { data, isLoading, error } = useQuery({
     queryKey: ["products"],
     queryFn: () => listProducts(),
@@ -40,8 +34,29 @@ function ShopPage() {
   const { add, count } = useCart();
   const [justAdded, setJustAdded] = useState<string | null>(null);
 
-  const products = (data ?? []) as Product[];
-  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))), [products]);
+  useEffect(() => {
+    const storedProducts = readCatalogProducts();
+    const storedCategories = readCatalogCategories();
+
+    if (storedProducts.length > 0) {
+      setCatalogProducts(storedProducts);
+    } else if (data && data.length > 0) {
+      setCatalogProducts(data as Product[]);
+    }
+
+    if (storedCategories.length > 0) {
+      setCatalogCategories(storedCategories);
+    } else if (data && data.length > 0) {
+      const derivedCategories = Array.from(new Set((data as Product[]).map((p) => p.category))).map((name) => ({ id: name, name, description: "" }));
+      setCatalogCategories(derivedCategories);
+    }
+  }, [data]);
+
+  const products = catalogProducts.length > 0 ? catalogProducts : ((data ?? []) as Product[]);
+  const categories = useMemo(() => {
+    if (catalogCategories.length > 0) return catalogCategories.map((category) => category.name);
+    return Array.from(new Set(products.map((p) => p.category)));
+  }, [catalogCategories, products]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

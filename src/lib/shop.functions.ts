@@ -14,13 +14,96 @@ export const listProducts = createServerFn({ method: "GET" }).handler(async () =
   const supabase = publicClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock")
+    .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_url")
     .eq("in_stock", true)
     .order("category")
     .order("name");
-  if (error) throw new Error(error.message);
+  if (error) {
+    const fallback = await supabase.from("products").select("id,name,category,description,price_kes,unit,requires_prescription,in_stock").eq("in_stock", true).order("category").order("name");
+    if (fallback.error) throw new Error(error.message);
+    return fallback.data ?? [];
+  }
   return data ?? [];
 });
+
+export const listProductCategories = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase.from("product_categories").select("id,name,description").order("name");
+  if (error) {
+    const fallbackProducts = await supabase.from("products").select("category").order("category");
+    if (fallbackProducts.error) throw new Error(error.message);
+    const categories = Array.from(new Set((fallbackProducts.data ?? []).map((item) => item.category).filter(Boolean))) as string[];
+    return categories.map((name, index) => ({ id: `${index}-${name}`, name, description: "" }));
+  }
+  return data ?? [];
+});
+
+const productInputSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1).max(160),
+  category: z.string().min(1).max(80),
+  description: z.string().max(500).optional().default(""),
+  price_kes: z.number().min(0).or(z.string().transform((value) => Number(value)).pipe(z.number().min(0))),
+  unit: z.string().min(1).max(40).optional().default("pack"),
+  requires_prescription: z.boolean().optional().default(false),
+  in_stock: z.boolean().optional().default(true),
+  image_url: z.string().nullable().optional(),
+});
+
+export const upsertProduct = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => productInputSchema.parse(input))
+  .handler(async ({ data }) => {
+    const payload = {
+      id: data.id,
+      name: data.name,
+      category: data.category,
+      description: data.description ?? "",
+      price_kes: Number(data.price_kes),
+      unit: data.unit ?? "pack",
+      requires_prescription: data.requires_prescription ?? false,
+      in_stock: data.in_stock ?? true,
+      image_url: data.image_url ?? null,
+    };
+
+    const { data: saved, error } = await supabaseAdmin
+      .from("products")
+      .upsert(payload, { onConflict: "id" })
+      .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_url")
+      .single();
+
+    if (error) throw new Error(error.message);
+    return saved;
+  });
+
+export const upsertCategory = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid().optional(), name: z.string().min(1).max(80), description: z.string().max(500).optional().default("") }).parse(input))
+  .handler(async ({ data }) => {
+    const payload = { id: data.id, name: data.name, description: data.description ?? "" };
+    const { data: saved, error } = await supabaseAdmin.from("product_categories").upsert(payload, { onConflict: "id" }).select("id,name,description").single();
+    if (error) throw new Error(error.message);
+    return saved;
+  });
+
+export const removeProduct = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const { error } = await supabaseAdmin.from("products").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+export const removeCategory = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data }) => {
+    const { data: category, error: categoryError } = await supabaseAdmin.from("product_categories").select("name").eq("id", data.id).maybeSingle();
+    if (categoryError) throw new Error(categoryError.message);
+    if (category?.name) {
+      await supabaseAdmin.from("products").update({ category: "Uncategorized" }).eq("category", category.name);
+    }
+    const { error } = await supabaseAdmin.from("product_categories").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
 
 const cartItemSchema = z.object({
   id: z.string().uuid(),

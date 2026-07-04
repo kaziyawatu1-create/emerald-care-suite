@@ -1,22 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle } from "lucide-react";
+import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search } from "lucide-react";
+import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
+import { listProductCategories, listProducts, removeCategory, removeProduct, upsertCategory, upsertProduct } from "../lib/shop.functions";
 
-type ProductItem = {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  description: string;
-  stock: number;
-  active: boolean;
-};
+type ProductItem = CatalogProduct;
 
-type CategoryItem = {
-  id: string;
-  name: string;
-  description: string;
-};
+type CategoryItem = CatalogCategory;
 
 type OrderItem = {
   id: string;
@@ -31,32 +22,6 @@ type OrderItem = {
 type ProductForm = Omit<ProductItem, "id">;
 
 type CategoryForm = Omit<CategoryItem, "id">;
-
-const defaultProducts: ProductItem[] = [
-  {
-    id: "prod-1",
-    name: "Vitamin C 1000mg",
-    category: "Wellness",
-    price: 1200,
-    description: "Daily immunity support",
-    stock: 25,
-    active: true,
-  },
-  {
-    id: "prod-2",
-    name: "Hydrating Face Cream",
-    category: "Skincare",
-    price: 2400,
-    description: "Moisturizing cream for smooth skin",
-    stock: 12,
-    active: true,
-  },
-];
-
-const defaultCategories: CategoryItem[] = [
-  { id: "cat-1", name: "Wellness", description: "Vitamins and wellness essentials" },
-  { id: "cat-2", name: "Skincare", description: "Skincare and beauty products" },
-];
 
 const defaultOrders: OrderItem[] = [
   {
@@ -83,8 +48,6 @@ const defaultOrders: OrderItem[] = [
 ];
 
 const storageKeys = {
-  products: "nuno-dashboard-products",
-  categories: "nuno-dashboard-categories",
   orders: "nuno-dashboard-orders",
   session: "nuno-dashboard-session",
 };
@@ -117,21 +80,40 @@ function DashboardPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [products, setProducts] = useState<ProductItem[]>(() => readStorage(storageKeys.products, defaultProducts));
-  const [categories, setCategories] = useState<CategoryItem[]>(() => readStorage(storageKeys.categories, defaultCategories));
+  const saveProductFn = useServerFn(upsertProduct);
+  const saveCategoryFn = useServerFn(upsertCategory);
+  const deleteProductFn = useServerFn(removeProduct);
+  const deleteCategoryFn = useServerFn(removeCategory);
+  const [products, setProducts] = useState<ProductItem[]>(() => readCatalogProducts());
+  const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
-  const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", price: 0, description: "", stock: 0, active: true });
+  const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
+  const [productSearch, setProductSearch] = useState("");
+  const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
-    writeStorage(storageKeys.products, products);
-  }, [products]);
+    const loadCatalog = async () => {
+      try {
+        const [productRows, categoryRows] = await Promise.all([listProducts(), listProductCategories()]);
+        setProducts(productRows as ProductItem[]);
+        setCategories(categoryRows as CategoryItem[]);
+      } catch (error) {
+        console.error("Failed to load catalog", error);
+      }
+    };
+
+    loadCatalog();
+  }, []);
 
   useEffect(() => {
-    writeStorage(storageKeys.categories, categories);
-  }, [categories]);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("nuno-dashboard-products", JSON.stringify(products));
+      window.localStorage.setItem("nuno-dashboard-categories", JSON.stringify(categories));
+    }
+  }, [products, categories]);
 
   useEffect(() => {
     writeStorage(storageKeys.orders, orders);
@@ -149,6 +131,35 @@ function DashboardPage() {
   const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || "admin1234";
 
   const productCategories = useMemo(() => categories.map((cat) => cat.name), [categories]);
+  const stats = useMemo(() => {
+    const medicineCount = products.filter((product) => !["Perfumes", "Skincare"].includes(product.category)).length;
+    const perfumeCount = products.filter((product) => product.category === "Perfumes").length;
+    const skincareCount = products.filter((product) => product.category === "Skincare").length;
+    return [
+      { label: "Medicines", value: medicineCount, accent: "text-primary" },
+      { label: "Perfumes", value: perfumeCount, accent: "text-gold" },
+      { label: "Skincare", value: skincareCount, accent: "text-primary" },
+      { label: "Orders", value: orders.length, accent: "text-foreground" },
+    ];
+  }, [products, orders.length]);
+
+  const filteredProducts = useMemo(() => {
+    const query = productSearch.trim().toLowerCase();
+    if (!query) return products;
+    return products.filter((product) => {
+      const haystack = `${product.name} ${product.category} ${product.description}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [products, productSearch]);
+
+  const filteredCategories = useMemo(() => {
+    const query = categorySearch.trim().toLowerCase();
+    if (!query) return categories;
+    return categories.filter((category) => {
+      const haystack = `${category.name} ${category.description}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [categories, categorySearch]);
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -168,7 +179,7 @@ function DashboardPage() {
   }
 
   function resetProductForm() {
-    setProductForm({ name: "", category: "", price: 0, description: "", stock: 0, active: true });
+    setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
     setEditingProductId(null);
   }
 
@@ -177,49 +188,74 @@ function DashboardPage() {
     setEditingCategoryId(null);
   }
 
-  function handleSaveProduct(e: React.FormEvent) {
+  async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
     if (!productForm.name.trim() || !productForm.category.trim()) return;
 
-    if (editingProductId) {
-      setProducts((prev) => prev.map((p) => (p.id === editingProductId ? { ...p, ...productForm, price: Number(productForm.price), stock: Number(productForm.stock) } : p)));
-    } else {
-      const newProduct: ProductItem = {
-        id: `prod-${Date.now()}`,
-        ...productForm,
-        price: Number(productForm.price),
-        stock: Number(productForm.stock),
-      };
-      setProducts((prev) => [newProduct, ...prev]);
-    }
+    try {
+      const savedProduct = (await saveProductFn({
+        data: {
+          id: editingProductId ?? undefined,
+          name: productForm.name,
+          category: productForm.category,
+          description: productForm.description,
+          price_kes: productForm.price_kes,
+          unit: productForm.unit,
+          requires_prescription: productForm.requires_prescription,
+          in_stock: productForm.in_stock,
+          image_url: productForm.image_url ?? null,
+        },
+      })) as ProductItem;
 
-    resetProductForm();
+      setProducts((prev) => {
+        if (editingProductId) {
+          return prev.map((p) => (p.id === editingProductId ? savedProduct : p));
+        }
+        return [savedProduct, ...prev];
+      });
+      resetProductForm();
+    } catch (error) {
+      console.error("Failed to save product", error);
+    }
   }
 
   function handleEditProduct(product: ProductItem) {
     setEditingProductId(product.id);
-    setProductForm({ name: product.name, category: product.category, price: product.price, description: product.description, stock: product.stock, active: product.active });
+    setProductForm({ name: product.name, category: product.category, description: product.description, price_kes: product.price_kes, unit: product.unit, requires_prescription: product.requires_prescription, in_stock: product.in_stock, image_url: product.image_url ?? null });
   }
 
-  function handleDeleteProduct(id: string) {
-    setProducts((prev) => prev.filter((item) => item.id !== id));
+  async function handleDeleteProduct(id: string) {
+    try {
+      await deleteProductFn({ data: { id } });
+      setProducts((prev) => prev.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error("Failed to delete product", error);
+    }
   }
 
-  function handleSaveCategory(e: React.FormEvent) {
+  async function handleSaveCategory(e: React.FormEvent) {
     e.preventDefault();
     if (!categoryForm.name.trim()) return;
 
-    if (editingCategoryId) {
-      setCategories((prev) => prev.map((c) => (c.id === editingCategoryId ? { ...c, ...categoryForm } : c)));
-    } else {
-      const newCategory: CategoryItem = {
-        id: `cat-${Date.now()}`,
-        ...categoryForm,
-      };
-      setCategories((prev) => [newCategory, ...prev]);
-    }
+    try {
+      const savedCategory = (await saveCategoryFn({
+        data: {
+          id: editingCategoryId ?? undefined,
+          name: categoryForm.name,
+          description: categoryForm.description,
+        },
+      })) as CategoryItem;
 
-    resetCategoryForm();
+      setCategories((prev) => {
+        if (editingCategoryId) {
+          return prev.map((c) => (c.id === editingCategoryId ? savedCategory : c));
+        }
+        return [savedCategory, ...prev];
+      });
+      resetCategoryForm();
+    } catch (error) {
+      console.error("Failed to save category", error);
+    }
   }
 
   function handleEditCategory(category: CategoryItem) {
@@ -227,9 +263,17 @@ function DashboardPage() {
     setCategoryForm({ name: category.name, description: category.description });
   }
 
-  function handleDeleteCategory(id: string) {
-    setCategories((prev) => prev.filter((item) => item.id !== id));
-    setProducts((prev) => prev.map((item) => (item.category === categories.find((c) => c.id === id)?.name ? { ...item, category: "Uncategorized" } : item)));
+  async function handleDeleteCategory(id: string) {
+    const deletedCategoryName = categories.find((c) => c.id === id)?.name;
+    try {
+      await deleteCategoryFn({ data: { id } });
+      setCategories((prev) => prev.filter((item) => item.id !== id));
+      if (deletedCategoryName) {
+        setProducts((prev) => prev.map((item) => (item.category === deletedCategoryName ? { ...item, category: "Uncategorized" } : item)));
+      }
+    } catch (error) {
+      console.error("Failed to delete category", error);
+    }
   }
 
   if (!isLoggedIn) {
@@ -286,6 +330,15 @@ function DashboardPage() {
           </button>
         </div>
 
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="rounded-4xl border border-border bg-card p-5 shadow-soft">
+              <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+              <p className={`mt-2 font-display text-3xl font-semibold ${stat.accent}`}>{stat.value}</p>
+            </div>
+          ))}
+        </div>
+
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <section className="rounded-4xl border border-border bg-card p-6 shadow-soft">
             <div className="flex items-center justify-between gap-3">
@@ -316,19 +369,36 @@ function DashboardPage() {
               </label>
               <label className="text-sm font-medium">
                 Price (KES)
-                <input type="number" value={productForm.price} onChange={(e) => setProductForm((prev) => ({ ...prev, price: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
+                <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
               </label>
               <label className="text-sm font-medium">
-                Stock
-                <input type="number" value={productForm.stock} onChange={(e) => setProductForm((prev) => ({ ...prev, stock: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
+                Unit
+                <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
               </label>
               <label className="text-sm font-medium md:col-span-2">
                 Description
                 <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
               </label>
-              <label className="flex items-center gap-3 text-sm font-medium md:col-span-2">
-                <input type="checkbox" checked={productForm.active} onChange={(e) => setProductForm((prev) => ({ ...prev, active: e.target.checked }))} />
-                Visible in shop
+              {/(skincare|perfumes)/i.test(productForm.category) ? (
+                <label className="text-sm font-medium md:col-span-2">
+                  Product image
+                  <input type="file" accept="image/*" onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setProductForm((prev) => ({ ...prev, image_url: typeof reader.result === "string" ? reader.result : null }));
+                    reader.readAsDataURL(file);
+                  }} className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                  {productForm.image_url ? <img src={productForm.image_url} alt="Preview" className="mt-3 h-24 w-full rounded-2xl object-cover" /> : null}
+                </label>
+              ) : null}
+              <label className="flex items-center gap-3 text-sm font-medium">
+                <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
+                Requires prescription
+              </label>
+              <label className="flex items-center gap-3 text-sm font-medium">
+                <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
+                In stock
               </label>
               <div className="md:col-span-2 flex gap-3">
                 <button type="submit" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold">{editingProductId ? "Save product" : "Create product"}</button>
@@ -336,8 +406,18 @@ function DashboardPage() {
               </div>
             </form>
 
-            <div className="mt-8 space-y-3">
-              {products.map((product) => (
+            <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+              <Search className="h-4 w-4 text-primary" />
+              <input
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Search products"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </label>
+
+            <div className="mt-6 space-y-3">
+              {filteredProducts.map((product) => (
                 <div key={product.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
@@ -345,7 +425,7 @@ function DashboardPage() {
                       <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{product.category}</span>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{product.description}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(product.price)} · Stock {product.stock} · {product.active ? "Visible" : "Hidden"}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(product.price_kes)} · {product.unit} · {product.in_stock ? "In stock" : "Out of stock"} · {product.requires_prescription ? "Rx" : "OTC"}</p>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => handleEditProduct(product)} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
@@ -390,8 +470,18 @@ function DashboardPage() {
                 </div>
               </form>
 
+              <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+                <Search className="h-4 w-4 text-primary" />
+                <input
+                  value={categorySearch}
+                  onChange={(e) => setCategorySearch(e.target.value)}
+                  placeholder="Search categories"
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </label>
+
               <div className="mt-6 space-y-3">
-                {categories.map((category) => (
+                {filteredCategories.map((category) => (
                   <div key={category.id} className="rounded-2xl border border-border bg-background px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
