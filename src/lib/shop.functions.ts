@@ -145,6 +145,38 @@ export const removeProduct = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+const uploadImageSchema = z.object({
+  data_url: z.string().min(20),
+  filename: z.string().min(1).max(120).optional(),
+});
+
+export const uploadProductImage = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => uploadImageSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const match = /^data:(.+?);base64,(.+)$/.exec(data.data_url);
+    if (!match) throw new Error("Invalid image data");
+    const contentType = match[1];
+    const bytes = Buffer.from(match[2], "base64");
+    const ext = (contentType.split("/")[1] || "png").split("+")[0];
+    const safeName = (data.filename ?? "image").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
+    const path = `${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}-${safeName}.${ext}`;
+
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("product-images")
+      .upload(path, bytes, { contentType, upsert: false });
+    if (upErr) throw new Error(upErr.message);
+
+    // Bucket is private on this workspace — use a long-lived signed URL.
+    const { data: signed, error: signErr } = await supabaseAdmin.storage
+      .from("product-images")
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+    if (signErr) throw new Error(signErr.message);
+
+    return { url: signed.signedUrl, path };
+  });
+
+
 export const removeCategory = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {

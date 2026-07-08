@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
-import productPlaceholder from "../assets/product-placeholder.svg";
+
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
@@ -137,7 +137,17 @@ function ShopPage() {
             ))}
           </div>
 
-          {isLoading && <p className="text-muted-foreground">Loading catalogue…</p>}
+          {isLoading && products.length === 0 && (
+            <div className="mb-14">
+              <div className="flex items-baseline gap-3 mb-5">
+                <div className="h-8 w-40 rounded bg-muted animate-pulse" />
+                <div className="h-4 w-16 rounded bg-muted animate-pulse" />
+              </div>
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)}
+              </div>
+            </div>
+          )}
           {error && (
             <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive flex items-center gap-3">
               <AlertCircle className="h-5 w-5" /> Could not load products. Please refresh.
@@ -147,6 +157,7 @@ function ShopPage() {
           {!isLoading && Object.keys(grouped).length === 0 && (
             <p className="text-muted-foreground">No medicines match your search.</p>
           )}
+
 
           {Object.entries(grouped).map(([cat, list]) => (
             <div key={cat} className="mb-14">

@@ -70,6 +70,42 @@ export type Database = {
           },
         ]
       }
+      offers: {
+        Row: {
+          badge: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          discount: string | null
+          expires_at: string | null
+          id: string
+          image: string | null
+          title: string
+        }
+        Insert: {
+          badge?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount?: string | null
+          expires_at?: string | null
+          id?: string
+          image?: string | null
+          title: string
+        }
+        Update: {
+          badge?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount?: string | null
+          expires_at?: string | null
+          id?: string
+          image?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           id: string
