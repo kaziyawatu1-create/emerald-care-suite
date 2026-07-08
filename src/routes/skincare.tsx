@@ -63,13 +63,16 @@ function SkincarePage() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {isLoading && products.length === 0 &&
+              Array.from({ length: 6 }).map((_, i) => <ProductImageCardSkeleton key={`sk-${i}`} />)}
             {products.map((p, index) => {
               const price = Number(p.price_kes);
               const added = justAdded === p.id;
               return (
                 <Reveal key={p.id} delay={index * 40}>
                   <article className="flex h-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-card shadow-soft card-lift">
-                    <img src={(p as Product & { image_url?: string | null }).image_url ?? serviceSkincare} alt={p.name} className="aspect-[4/3] w-full object-cover" loading="lazy" width={1280} height={960} />
+                    <ProductImage src={(p as Product & { image_url?: string | null }).image_url ?? serviceSkincare} alt={p.name} className="aspect-[4/3] w-full" />
+
                     <div className="flex flex-1 flex-col p-6">
                       <h2 className="font-display text-xl font-bold">{p.name}</h2>
                       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{p.description}</p>
