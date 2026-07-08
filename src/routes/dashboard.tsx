@@ -109,8 +109,7 @@ function DashboardPage() {
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
-  const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null, image_urls: [] });
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
   const [serviceForm, setServiceForm] = useState<ServiceForm>({ name: "", description: "", type: "inhouse" });
   const [offers, setOffers] = useState<any[]>([]);
@@ -252,8 +251,7 @@ function DashboardPage() {
 
 
   function resetProductForm() {
-    setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
-    setSelectedImageFile(null);
+    setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null, image_urls: [] });
     setEditingProductId(null);
     setProductDialogOpen(false);
   }
@@ -261,7 +259,6 @@ function DashboardPage() {
   function openProductDialog(product?: ProductItem) {
     if (product) {
       setEditingProductId(product.id);
-      setSelectedImageFile(null);
       setProductForm({
         name: product.name,
         category: product.category,
@@ -271,11 +268,11 @@ function DashboardPage() {
         requires_prescription: product.requires_prescription,
         in_stock: product.in_stock,
         image_url: product.image_url ?? null,
+        image_urls: product.image_urls ?? (product.image_url ? [product.image_url] : []),
       });
     } else {
       setEditingProductId(null);
-      setSelectedImageFile(null);
-      setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
+      setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null, image_urls: [] });
     }
     setProductDialogOpen(true);
   }
@@ -388,7 +385,7 @@ function DashboardPage() {
 
     setProductSaving(true);
     try {
-      const imageUrl = productForm.image_url ?? (selectedImageFile ? await fileToDataUrl(selectedImageFile) : null);
+      const imageUrls = productForm.image_urls?.length ? productForm.image_urls : productForm.image_url ? [productForm.image_url] : [];
       const savedProduct = (await saveProductFn({
         data: {
           id: editingProductId ?? undefined,
@@ -399,7 +396,8 @@ function DashboardPage() {
           unit: productForm.unit,
           requires_prescription: productForm.requires_prescription,
           in_stock: productForm.in_stock,
-          image_url: imageUrl ?? null,
+          image_urls: imageUrls.length ? imageUrls : null,
+          image_url: imageUrls.length ? imageUrls[0] : null,
         },
       })) as unknown as ProductItem;
 
@@ -438,22 +436,35 @@ function DashboardPage() {
     }
   }
 
-  async function handleProductImageChange(file: File | undefined) {
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image is too large. Please pick one under 2MB.");
-      return;
-    }
+  async function handleProductImageChange(files: FileList | null) {
+    if (!files?.length) return;
+    const newImages: string[] = [];
     setUploadingImage(true);
+
     try {
-      const dataUrl: string = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-        reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
-        reader.readAsDataURL(file);
-      });
-      setProductForm((prev) => ({ ...prev, image_url: dataUrl }));
-      toast.success("Image ready. Save the product to keep it.");
+      for (const file of Array.from(files)) {
+        if (file.size > 2 * 1024 * 1024) {
+          toast.error("One or more images are too large. Please choose files under 2MB.");
+          continue;
+        }
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+          reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
+          reader.readAsDataURL(file);
+        });
+        if (dataUrl) {
+          newImages.push(dataUrl);
+        }
+      }
+      if (newImages.length > 0) {
+        setProductForm((prev) => ({
+          ...prev,
+          image_urls: [...(prev.image_urls ?? []), ...newImages],
+          image_url: prev.image_url ?? newImages[0] ?? null,
+        }));
+        toast.success("Image(s) ready. Save the product to keep them.");
+      }
     } catch (error) {
       toast.error(`Could not read image: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
@@ -702,8 +713,12 @@ function DashboardPage() {
               {filteredProducts.map((product) => (
                 <div key={product.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-4 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-3">
-                    {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="h-16 w-16 shrink-0 rounded-xl object-cover" />
+                    {(product.image_urls && product.image_urls.length ? product.image_urls[0] : product.image_url) ? (
+                      <img
+                        src={(product.image_urls && product.image_urls.length ? product.image_urls[0] : product.image_url) as string}
+                        alt={product.name}
+                        className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                      />
                     ) : (
                       <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                         <ImageIcon className="h-5 w-5" />
@@ -732,68 +747,106 @@ function DashboardPage() {
           </section>
 
           <Dialog open={productDialogOpen} onOpenChange={(open) => (open ? setProductDialogOpen(true) : resetProductForm())}>
-            <DialogContent>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
               <DialogHeader>
                 <DialogTitle>{editingProductId ? "Edit product" : "New product"}</DialogTitle>
                 <DialogDescription>Manage a shop product and save it to your inventory.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSaveProduct} className="mt-4 grid gap-4 md:grid-cols-2">
-                <label className="text-sm font-medium md:col-span-2">
-                  Product name
-                  <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                </label>
-                <label className="text-sm font-medium">
-                  Category
-                  <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
-                    <option value="">Select category</option>
-                    {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
-                    <option value="Uncategorized">Uncategorized</option>
-                  </select>
-                </label>
-                <label className="text-sm font-medium">
-                  Price (KES)
-                  <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
-                </label>
-                <label className="text-sm font-medium">
-                  Unit
-                  <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                </label>
-                <label className="text-sm font-medium md:col-span-2">
-                  Description
-                  <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                </label>
-                <label className="text-sm font-medium md:col-span-2">
-                  Product image
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={uploadingImage}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      handleProductImageChange(file);
-                      event.target.value = "";
-                    }}
-                    className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3"
-                  />
-                  {productForm.image_url ? <img src={productForm.image_url} alt="Preview" className="mt-3 h-24 w-full rounded-2xl object-cover" /> : null}
-                  {uploadingImage ? <p className="mt-2 text-xs text-muted-foreground">Preparing image…</p> : null}
-                </label>
-                <label className="flex items-center gap-3 text-sm font-medium">
-                  <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
-                  Requires prescription
-                </label>
-                <label className="flex items-center gap-3 text-sm font-medium">
-                  <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
-                  In stock
-                </label>
-                <DialogFooter className="md:col-span-2">
+              <div className="mt-4 flex h-[calc(90vh-170px)] flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto pr-2">
+                  <form id="product-form" onSubmit={handleSaveProduct} className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
+                    <label className="text-sm font-medium md:col-span-2">
+                      Product name
+                      <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                    </label>
+                    <label className="text-sm font-medium">
+                      Category
+                      <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
+                        <option value="">Select category</option>
+                        {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
+                        <option value="Uncategorized">Uncategorized</option>
+                      </select>
+                    </label>
+                    <label className="text-sm font-medium">
+                      Price (KES)
+                      <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
+                    </label>
+                    <label className="text-sm font-medium">
+                      Unit
+                      <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                    </label>
+                    <div className="space-y-4">
+                      <label className="text-sm font-medium">
+                        Description
+                        <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-32 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                      </label>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="flex items-center gap-3 text-sm font-medium">
+                          <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
+                          Requires prescription
+                        </label>
+                        <label className="flex items-center gap-3 text-sm font-medium">
+                          <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
+                          In stock
+                        </label>
+                      </div>
+                    </div>
+                    <div className="rounded-3xl border border-border bg-background p-4 shadow-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">Product images</p>
+                          <p className="text-xs text-muted-foreground">Upload up to 6 images, then save.</p>
+                        </div>
+                        {uploadingImage ? <span className="text-xs text-muted-foreground">Preparing…</span> : null}
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        disabled={uploadingImage}
+                        onChange={(event) => {
+                          handleProductImageChange(event.target.files);
+                          event.target.value = "";
+                        }}
+                        className="mt-3 block w-full rounded-2xl border border-border bg-background px-4 py-3"
+                      />
+                      <div className="mt-4 grid gap-3 sm:grid-cols-3 max-h-60 overflow-y-auto">
+                        {productForm.image_urls && productForm.image_urls.length > 0 ? (
+                          productForm.image_urls.map((src, index) => (
+                            <div key={src + index} className="group relative overflow-hidden rounded-2xl border border-border">
+                              <img src={src} alt={`Preview ${index + 1}`} className="h-24 w-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setProductForm((prev) => ({
+                                  ...prev,
+                                  image_urls: prev.image_urls?.filter((_, idx) => idx !== index) ?? [],
+                                }))}
+                                className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition group-hover:opacity-100"
+                                aria-label="Remove image"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))
+                        ) : productForm.image_url ? (
+                          <img src={productForm.image_url} alt="Preview" className="h-24 w-full rounded-2xl object-cover" />
+                        ) : (
+                          <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                            No images selected yet.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </form>
+                </div>
+                <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
-                  <button type="submit" disabled={productSaving} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                  <button type="submit" form="product-form" disabled={productSaving} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
                     {productSaving ? <svg className="inline-block h-4 w-4 animate-spin align-middle" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : null}
                     <span className="align-middle">{editingProductId ? (productSaving ? "Saving..." : "Save product") : (productSaving ? "Creating..." : "Create product")}</span>
                   </button>
                 </DialogFooter>
-              </form>
+              </div>
             </DialogContent>
           </Dialog>
 

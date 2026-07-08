@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Plus, Check, ShoppingBag, AlertCircle } from "lucide-react";
+import { Search, Plus, Check, ShoppingBag, AlertCircle, Eye, ArrowLeft, ArrowRight } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
@@ -58,6 +59,21 @@ function ShopPage() {
     if (catalogCategories.length > 0) return catalogCategories.map((category) => category.name);
     return Array.from(new Set(products.map((p) => p.category)));
   }, [catalogCategories, products]);
+
+  const [activeProduct, setActiveProduct] = useState<Product | null>(null);
+  const [activeProductImageIndex, setActiveProductImageIndex] = useState(0);
+
+  const getProductImages = (product: Product) => {
+    const maybeImages = (product as Product & { image_urls?: string[] | null }).image_urls;
+    const firstImage = (product as Product & { image_url?: string | null }).image_url;
+    const images = maybeImages && maybeImages.length ? maybeImages : firstImage ? [firstImage] : [];
+    return images.length > 0 ? images : [productPlaceholder];
+  };
+
+  const closeProductDetail = () => {
+    setActiveProduct(null);
+    setActiveProductImageIndex(0);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -157,34 +173,45 @@ function ShopPage() {
                           )}
                         </div>
                         <img
-                          src={p.image_url ?? productPlaceholder}
+                          src={getProductImages(p)[0]}
                           alt={p.name}
                           className="mt-5 aspect-[4/3] w-full rounded-[1rem] object-cover border border-border"
                           loading="lazy"
                         />
-                        <p className="mt-3 text-sm text-muted-foreground leading-relaxed flex-1">{p.description}</p>
+                        <p className="mt-3 text-sm text-muted-foreground leading-relaxed flex-1 overflow-hidden text-ellipsis line-clamp-1">{p.description}</p>
                         {!p.in_stock ? (
                           <span className="mt-4 inline-flex w-fit rounded-full border border-destructive/20 bg-destructive/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
                             Out of stock
                           </span>
                         ) : null}
-                        <div className="mt-5 flex items-center justify-between gap-3">
+                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                           <span className="font-display text-xl font-bold text-primary">{formatKES(price)}</span>
-                          <button
-                            onClick={() => {
-                              if (!p.in_stock) return;
-                              add({ id: p.id, name: p.name, price, category: p.category });
-                              setJustAdded(p.id);
-                              window.setTimeout(() => setJustAdded((v) => (v === p.id ? null : v)), 1200);
-                            }}
-                            disabled={!p.in_stock}
-                            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                              added ? "bg-primary/10 text-primary" : "btn-gradient"
-                            } ${!p.in_stock ? "cursor-not-allowed opacity-60" : ""}`}
-                          >
-                            {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                            {added ? "Added" : p.in_stock ? "Add to cart" : "Out of stock"}
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => {
+                                setActiveProduct(p);
+                                setActiveProductImageIndex(0);
+                              }}
+                              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:border-primary hover:text-primary"
+                            >
+                              <Eye className="h-4 w-4" /> View
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (!p.in_stock) return;
+                                add({ id: p.id, name: p.name, price, category: p.category });
+                                setJustAdded(p.id);
+                                window.setTimeout(() => setJustAdded((v) => (v === p.id ? null : v)), 1200);
+                              }}
+                              disabled={!p.in_stock}
+                              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                                added ? "bg-primary/10 text-primary" : "btn-gradient"
+                              } ${!p.in_stock ? "cursor-not-allowed opacity-60" : ""}`}
+                            >
+                              {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                              {added ? "Added" : p.in_stock ? "Add to cart" : "Out of stock"}
+                            </button>
+                          </div>
                         </div>
                       </article>
                     </Reveal>
@@ -195,6 +222,87 @@ function ShopPage() {
           ))}
         </div>
       </section>
-    </>
+          <Dialog open={!!activeProduct} onOpenChange={(open) => { if (!open) closeProductDetail(); }}>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>{activeProduct?.name ?? "Product details"}</DialogTitle>
+                <DialogDescription>Browse uploaded product images and view product details.</DialogDescription>
+              </DialogHeader>
+              {activeProduct ? (
+                <div className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
+                  <div>
+                    <div className="relative overflow-hidden rounded-3xl border border-border bg-background">
+                      <img
+                        src={getProductImages(activeProduct)[activeProductImageIndex]}
+                        alt={activeProduct.name}
+                        className="h-[360px] w-full object-cover"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/60 to-transparent p-3">
+                        <button
+                          onClick={() => setActiveProductImageIndex((current) => Math.max(current - 1, 0))}
+                          disabled={activeProductImageIndex === 0}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setActiveProductImageIndex((current) => Math.min(current + 1, getProductImages(activeProduct).length - 1))}
+                          disabled={activeProductImageIndex >= getProductImages(activeProduct).length - 1}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-4 gap-3">
+                      {getProductImages(activeProduct).map((image, idx) => (
+                        <button
+                          key={`${image}-${idx}`}
+                          type="button"
+                          onClick={() => setActiveProductImageIndex(idx)}
+                          className={`overflow-hidden rounded-3xl border ${idx === activeProductImageIndex ? "border-primary" : "border-border"}`}
+                        >
+                          <img src={image} alt={`${activeProduct.name} image ${idx + 1}`} className="h-24 w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">{activeProduct.category}</p>
+                    <p className="text-3xl font-bold leading-tight">{activeProduct.name}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{activeProduct.description}</p>
+                    <div className="rounded-3xl border border-border bg-card p-5">
+                      <p className="text-sm text-muted-foreground">Price</p>
+                      <p className="mt-2 text-3xl font-bold text-primary">{formatKES(Number(activeProduct.price_kes))}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Per {activeProduct.unit}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {activeProduct.requires_prescription ? (
+                        <span className="rounded-full bg-gold/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gold">Rx</span>
+                      ) : null}
+                      {!activeProduct.in_stock ? (
+                        <span className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-destructive">Out of stock</span>
+                      ) : null}
+                    </div>
+                    <DialogFooter className="mt-6 gap-2">
+                      <button type="button" onClick={closeProductDetail} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Close</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          add({ id: activeProduct.id, name: activeProduct.name, price: Number(activeProduct.price_kes), category: activeProduct.category });
+                          closeProductDetail();
+                        }}
+                        disabled={!activeProduct.in_stock}
+                        className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60"
+                      >
+                        Add to cart
+                      </button>
+                    </DialogFooter>
+                  </div>
+                </div>
+              ) : null}
+            </DialogContent>
+          </Dialog>
+        </>
   );
 }

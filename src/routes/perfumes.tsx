@@ -99,13 +99,20 @@ function PerfumesPage() {
               return (
                 <Reveal key={p.id} delay={index * 40}>
                   <article className="flex h-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-card shadow-soft card-lift">
-                    <img src={(p as Product & { image_url?: string | null }).image_url ?? productPlaceholder} alt={displayName} className="aspect-[4/3] w-full object-cover" loading="lazy" width={1280} height={960} />
+                    <img
+                      src={((p as Product & { image_url?: string | null; image_urls?: string[] | null }).image_urls?.[0] ?? (p as Product & { image_url?: string | null }).image_url) ?? productPlaceholder}
+                      alt={displayName}
+                      className="aspect-[4/3] w-full object-cover"
+                      loading="lazy"
+                      width={1280}
+                      height={960}
+                    />
                     <div className="flex flex-1 flex-col p-6">
                       <div className="flex items-center justify-between gap-3">
                         <h2 className="font-display text-xl font-bold">{displayName}</h2>
                         <span className="rounded-full bg-gold/12 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gold">{p.gender}</span>
                       </div>
-                      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{p.description}</p>
+                      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground overflow-hidden text-ellipsis line-clamp-1">{p.description}</p>
                       <div className="mt-4 flex items-center justify-between gap-3">
                         <div>
                           <div className="font-display text-lg font-bold text-primary">{formatKES(price)}</div>

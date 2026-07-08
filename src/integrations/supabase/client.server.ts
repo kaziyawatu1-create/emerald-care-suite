@@ -46,7 +46,7 @@ function createSupabaseAdminClient() {
   }
 
   if (!SUPABASE_SERVICE_ROLE_KEY && SUPABASE_PUBLISHABLE_KEY) {
-    console.warn('[Supabase] Using the publishable key as a fallback because SUPABASE_SERVICE_ROLE_KEY is not configured.');
+    console.warn('[Supabase] SUPABASE_SERVICE_ROLE_KEY is not configured. Using the publishable key as a fallback; server-side writes may be blocked by row-level security (RLS).\nSet SUPABASE_SERVICE_ROLE_KEY (the service_role secret) in your environment to allow trusted server operations, e.g.: SUPABASE_SERVICE_ROLE_KEY=your_service_role_key');
   }
 
   return createClient<Database>(SUPABASE_URL, effectiveKey, {
