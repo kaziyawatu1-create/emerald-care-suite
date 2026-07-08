@@ -89,6 +89,8 @@ function DashboardPage() {
   const saveCategoryFn = useServerFn(upsertCategory);
   const deleteProductFn = useServerFn(removeProduct);
   const deleteCategoryFn = useServerFn(removeCategory);
+  const uploadImageFn = useServerFn(uploadProductImage);
+
   const [products, setProducts] = useState<ProductItem[]>(() => readCatalogProducts());
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
