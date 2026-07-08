@@ -450,14 +450,8 @@ function DashboardPage() {
           </button>
         </div>
 
-        {feedback ? (
-          <div className="fixed right-4 top-4 z-50 w-80">
-            <Alert className={feedback.type === "error" ? "border-destructive/40 bg-destructive/10" : "border-primary/30 bg-primary/10"}>
-              <AlertTitle>{feedback.type === "error" ? "Action failed" : "Success"}</AlertTitle>
-              <AlertDescription>{feedback.message}</AlertDescription>
-            </Alert>
-          </div>
-        ) : null}
+
+
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
