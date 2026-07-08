@@ -7,7 +7,6 @@ export type CatalogProduct = {
   unit: string;
   requires_prescription: boolean;
   in_stock: boolean;
-  image_url?: string | null;
   image_urls?: string[] | null;
 };
 

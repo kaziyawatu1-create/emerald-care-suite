@@ -14,12 +14,12 @@ export const listProducts = createServerFn({ method: "GET" }).handler(async () =
   const supabase = publicClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_url,image_urls")
+    .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls")
     .eq("in_stock", true)
     .order("category")
     .order("name");
   if (error) {
-    const fallback = await supabase.from("products").select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_url").eq("in_stock", true).order("category").order("name");
+    const fallback = await supabase.from("products").select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls").eq("in_stock", true).order("category").order("name");
     if (fallback.error) throw new Error(error.message);
     return fallback.data ?? [];
   }
@@ -47,7 +47,6 @@ const productInputSchema = z.object({
   unit: z.string().min(1).max(40).optional().default("pack"),
   requires_prescription: z.boolean().optional().default(false),
   in_stock: z.boolean().optional().default(true),
-  image_url: z.string().nullable().optional(),
   image_urls: z.array(z.string()).nullable().optional(),
 });
 
@@ -64,15 +63,14 @@ export const upsertProduct = createServerFn({ method: "POST" })
       unit: data.unit ?? "pack",
       requires_prescription: data.requires_prescription ?? false,
       in_stock: data.in_stock ?? true,
-      image_urls: data.image_urls?.length ? data.image_urls : data.image_url ? [data.image_url] : null,
-      image_url: data.image_url ?? (data.image_urls?.[0] ?? null),
+      image_urls: data.image_urls?.length ? data.image_urls : null,
     };
 
     try {
       const { data: saved, error } = await supabaseAdmin
         .from("products")
         .upsert(payload, { onConflict: "id" })
-        .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_url,image_urls")
+        .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls")
         .single();
 
       if (error) throw new Error(error.message);
@@ -98,7 +96,6 @@ export const upsertProduct = createServerFn({ method: "POST" })
           unit: payload.unit ?? "pack",
           requires_prescription: payload.requires_prescription ?? false,
           in_stock: payload.in_stock ?? true,
-          image_url: payload.image_url ?? null,
           image_urls: payload.image_urls ?? null,
         };
       }

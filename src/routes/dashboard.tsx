@@ -70,7 +70,27 @@ function readStorage<T>(key: string, fallback: T): T {
 
 function writeStorage<T>(key: string, value: T) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn(`Failed to persist ${key} to localStorage`, error);
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+}
+
+function sanitizeProductForStorage(product: ProductItem) {
+  const imageUrls = Array.isArray(product.image_urls)
+    ? product.image_urls.filter((url): url is string => typeof url === "string" && !url.startsWith("data:"))
+    : [];
+
+  return {
+    ...product,
+    image_urls: imageUrls,
+  };
 }
 
 function formatCurrency(value: number) {
@@ -96,7 +116,7 @@ function DashboardPage() {
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
-  const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null, image_urls: [] });
+  const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [] });
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
   const [serviceForm, setServiceForm] = useState<ServiceForm>({ name: "", description: "", type: "inhouse" });
   const [productSearch, setProductSearch] = useState("");
@@ -126,10 +146,11 @@ function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("nuno-dashboard-products", JSON.stringify(products));
-      window.localStorage.setItem("nuno-dashboard-categories", JSON.stringify(categories));
-    }
+    if (typeof window === "undefined") return;
+
+    const compactProducts = products.map(sanitizeProductForStorage);
+    writeStorage("nuno-dashboard-products", compactProducts);
+    writeStorage("nuno-dashboard-categories", categories);
   }, [products, categories]);
 
   useEffect(() => {
@@ -211,7 +232,7 @@ function DashboardPage() {
 
 
   function resetProductForm() {
-    setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null, image_urls: [] });
+    setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [] });
     setEditingProductId(null);
     setProductDialogOpen(false);
   }
@@ -227,12 +248,11 @@ function DashboardPage() {
         unit: product.unit,
         requires_prescription: product.requires_prescription,
         in_stock: product.in_stock,
-        image_url: product.image_url ?? null,
-        image_urls: product.image_urls ?? (product.image_url ? [product.image_url] : []),
+        image_urls: product.image_urls ?? [],
       });
     } else {
       setEditingProductId(null);
-      setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null, image_urls: [] });
+      setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [] });
     }
     setProductDialogOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -266,7 +286,7 @@ function DashboardPage() {
 
     setSavingProduct(true);
     try {
-      const imageUrls = productForm.image_urls?.length ? productForm.image_urls : productForm.image_url ? [productForm.image_url] : [];
+      const imageUrls = productForm.image_urls?.length ? productForm.image_urls : [];
       const savedProduct = (await saveProductFn({
         data: {
           id: editingProductId ?? undefined,
@@ -278,7 +298,6 @@ function DashboardPage() {
           requires_prescription: productForm.requires_prescription,
           in_stock: productForm.in_stock,
           image_urls: imageUrls.length ? imageUrls : null,
-          image_url: imageUrls.length ? imageUrls[0] : null,
         },
       })) as unknown as ProductItem;
 
@@ -335,21 +354,25 @@ function DashboardPage() {
           reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
           reader.readAsDataURL(file);
         });
-        if (dataUrl) {
-          newImages.push(dataUrl);
+        if (!dataUrl) continue;
+
+        const uploaded = (await uploadImageFn({
+          data: { data_url: dataUrl, filename: file.name },
+        })) as { url?: string } | null;
+
+        if (uploaded?.url) {
+          newImages.push(uploaded.url);
         }
       }
       if (newImages.length > 0) {
         setProductForm((prev) => ({
           ...prev,
           image_urls: [...(prev.image_urls ?? []), ...newImages],
-          image_url: prev.image_url ?? newImages[0] ?? null,
         }));
-        toast.success("Image(s) ready. Save the product to keep them.");
+        toast.success("Images uploaded and attached to the product.");
       }
     } catch (error) {
       toast.error(`Could not upload image: ${error instanceof Error ? error.message : "Unknown error"}`);
-
     } finally {
       setUploadingImage(false);
     }
@@ -518,9 +541,9 @@ function DashboardPage() {
               {filteredProducts.map((product) => (
                 <div key={product.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-4 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-3">
-                    {(product.image_urls && product.image_urls.length ? product.image_urls[0] : product.image_url) ? (
+                    {(product.image_urls && product.image_urls.length ? product.image_urls[0] : null) ? (
                       <img
-                        src={(product.image_urls && product.image_urls.length ? product.image_urls[0] : product.image_url) as string}
+                        src={(product.image_urls && product.image_urls.length ? product.image_urls[0] : null) as string}
                         alt={product.name}
                         className="h-16 w-16 shrink-0 rounded-xl object-cover"
                       />
@@ -633,8 +656,6 @@ function DashboardPage() {
                               </button>
                             </div>
                           ))
-                        ) : productForm.image_url ? (
-                          <img src={productForm.image_url} alt="Preview" className="h-24 w-full rounded-2xl object-cover" />
                         ) : (
                           <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
                             No images selected yet.
