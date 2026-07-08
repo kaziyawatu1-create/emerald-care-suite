@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Plus, Check, ShoppingBag, AlertCircle } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
+import { ProductCardSkeleton } from "../components/site/ProductSkeleton";
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
+
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
