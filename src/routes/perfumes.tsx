@@ -90,9 +90,9 @@ function PerfumesPage() {
             </Link>
           </div>
 
-          {isLoading && <p className="mt-6 text-sm text-muted-foreground">Loading fragrances…</p>}
-
           <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {isLoading && filtered.length === 0 &&
+              Array.from({ length: 6 }).map((_, i) => <ProductImageCardSkeleton key={`pf-${i}`} />)}
             {filtered.map((p, index) => {
               const price = Number(p.price_kes);
               const added = justAdded === p.id;
@@ -100,7 +100,8 @@ function PerfumesPage() {
               return (
                 <Reveal key={p.id} delay={index * 40}>
                   <article className="flex h-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-card shadow-soft card-lift">
-                    <img src={(p as Product & { image_url?: string | null }).image_url ?? servicePerfumes} alt={displayName} className="aspect-[4/3] w-full object-cover" loading="lazy" width={1280} height={960} />
+                    <ProductImage src={(p as Product & { image_url?: string | null }).image_url ?? servicePerfumes} alt={displayName} className="aspect-[4/3] w-full" />
+
                     <div className="flex flex-1 flex-col p-6">
                       <div className="flex items-center justify-between gap-3">
                         <h2 className="font-display text-xl font-bold">{displayName}</h2>
