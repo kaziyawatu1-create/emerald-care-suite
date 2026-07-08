@@ -655,28 +655,8 @@ function DashboardPage() {
               </div>
             </div>
 
-            <Dialog open={categoryDialogOpen} onOpenChange={(open) => (open ? setCategoryDialogOpen(true) : resetCategoryForm())}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingCategoryId ? "Edit category" : "New category"}</DialogTitle>
-                  <DialogDescription>Manage the product category name and description.</DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSaveCategory} className="mt-4 space-y-4">
-                  <label className="block text-sm font-medium">
-                    Category name
-                    <input value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                  </label>
-                  <label className="block text-sm font-medium">
-                    Description
-                    <textarea value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                  </label>
-                  <DialogFooter>
-                    <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
-                    <button type="submit" disabled={categorySaving} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">{categorySaving ? (editingCategoryId ? "Saving..." : "Creating...") : (editingCategoryId ? "Save category" : "Create category")}</button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+
+
 
             <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
               <div className="flex items-center gap-2 text-primary">
