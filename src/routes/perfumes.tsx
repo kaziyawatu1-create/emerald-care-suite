@@ -4,9 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus, Check, ShoppingBag } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
+import { ProductImageCardSkeleton, ProductImage } from "../components/site/ProductSkeleton";
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import servicePerfumes from "../assets/service-perfumes.jpg";
+
 
 export const Route = createFileRoute("/perfumes")({
   head: () => ({
