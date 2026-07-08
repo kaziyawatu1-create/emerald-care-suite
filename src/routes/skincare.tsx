@@ -7,6 +7,7 @@ import { Reveal } from "../components/site/Reveal";
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import serviceSkincare from "../assets/service-skincare.jpg";
+import productPlaceholder from "../assets/product-placeholder.svg";
 
 export const Route = createFileRoute("/skincare")({
   head: () => ({
@@ -67,7 +68,7 @@ function SkincarePage() {
               return (
                 <Reveal key={p.id} delay={index * 40}>
                   <article className="flex h-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-card shadow-soft card-lift">
-                    <img src={(p as Product & { image_url?: string | null }).image_url ?? serviceSkincare} alt={p.name} className="aspect-[4/3] w-full object-cover" loading="lazy" width={1280} height={960} />
+                    <img src={(p as Product & { image_url?: string | null }).image_url ?? productPlaceholder} alt={p.name} className="aspect-[4/3] w-full object-cover" loading="lazy" width={1280} height={960} />
                     <div className="flex flex-1 flex-col p-6">
                       <h2 className="font-display text-xl font-bold">{p.name}</h2>
                       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{p.description}</p>

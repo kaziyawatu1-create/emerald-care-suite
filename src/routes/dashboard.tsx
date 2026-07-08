@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon } from "lucide-react";
+import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon, Gift } from "lucide-react";
 import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listProductCategories, listProducts, removeCategory, removeProduct, upsertCategory, upsertProduct } from "../lib/shop.functions";
 import { formatServiceType, readServices, writeServices, type ServiceItem, type ServiceType } from "../lib/services";
+import { createOffer, deleteOffer, listOffers, updateOffer } from "../lib/offers.functions";
 
 
 type ProductItem = CatalogProduct;
@@ -27,6 +30,15 @@ type ProductForm = Omit<ProductItem, "id">;
 type CategoryForm = Omit<CategoryItem, "id">;
 
 type ServiceForm = { name: string; description: string; type: ServiceType };
+
+type OfferForm = {
+  title: string;
+  description: string;
+  discount: string;
+  badge: string;
+  image: string;
+  expiresAt: string;
+};
 
 const defaultOrders: OrderItem[] = [
   {
@@ -89,6 +101,10 @@ function DashboardPage() {
   const saveCategoryFn = useServerFn(upsertCategory);
   const deleteProductFn = useServerFn(removeProduct);
   const deleteCategoryFn = useServerFn(removeCategory);
+  const saveOfferFn = useServerFn(createOffer);
+  const updateOfferFn = useServerFn(updateOffer);
+  const deleteOfferFn = useServerFn(deleteOffer);
+  const loadOffersFn = useServerFn(listOffers);
   const [products, setProducts] = useState<ProductItem[]>(() => readCatalogProducts());
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
@@ -97,14 +113,26 @@ function DashboardPage() {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
   const [serviceForm, setServiceForm] = useState<ServiceForm>({ name: "", description: "", type: "inhouse" });
+  const [offers, setOffers] = useState<any[]>([]);
+  const [offerForm, setOfferForm] = useState<OfferForm>({ title: "", description: "", discount: "", badge: "", image: "", expiresAt: "" });
+  const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
-  const [savingProduct, setSavingProduct] = useState(false);
-  const [savingCategory, setSavingCategory] = useState(false);
+  const [productSaving, setProductSaving] = useState(false);
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [serviceSaving, setServiceSaving] = useState(false);
+  const [offerSaving, setOfferSaving] = useState(false);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
+  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
@@ -120,6 +148,23 @@ function DashboardPage() {
 
     loadCatalog();
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const rows = await loadOffersFn();
+        if (!mounted) return;
+        setOffers(Array.isArray(rows) ? (rows as any[]) : []);
+      } catch (error) {
+        console.error("Failed to load offers", error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadOffersFn]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -283,6 +328,57 @@ function DashboardPage() {
     setServiceDialogOpen(true);
   }
 
+  async function handleSaveService(e: React.FormEvent) {
+    e.preventDefault();
+    if (!serviceForm.name.trim() || !serviceForm.description.trim()) {
+      toast.error("Please enter the service name and description.");
+      return;
+    }
+
+    setServiceSaving(true);
+    try {
+      const savedService: ServiceItem = {
+        id: editingServiceId ?? `service-${Date.now()}`,
+        name: serviceForm.name,
+        description: serviceForm.description,
+        type: serviceForm.type,
+        createdAt: new Date().toISOString().slice(0, 10),
+      };
+
+      setServices((prev) => {
+        if (editingServiceId) {
+          return prev.map((service) => (service.id === editingServiceId ? savedService : service));
+        }
+        return [savedService, ...prev];
+      });
+      resetServiceForm();
+      showFeedback(editingServiceId ? "Service updated" : "Service created");
+      toast.success(editingServiceId ? "Service updated" : "Service created");
+    } catch (error) {
+      console.error("Failed to save service", error);
+      showFeedback(`Could not save service: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
+      toast.error(`Could not save service: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setServiceSaving(false);
+    }
+  }
+
+  async function handleDeleteService(id: string) {
+    if (!window.confirm("Delete this service?")) return;
+    setDeletingServiceId(id);
+    try {
+      setServices((prev) => prev.filter((service) => service.id !== id));
+      showFeedback("Service deleted");
+      toast.success("Service deleted");
+    } catch (error) {
+      console.error("Failed to delete service", error);
+      showFeedback(`Could not delete service: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
+      toast.error(`Could not delete service: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setDeletingServiceId(null);
+    }
+  }
+
   async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
     if (!productForm.name.trim() || !productForm.category.trim()) {
@@ -290,7 +386,7 @@ function DashboardPage() {
       return;
     }
 
-    setSavingProduct(true);
+    setProductSaving(true);
     try {
       const imageUrl = productForm.image_url ?? (selectedImageFile ? await fileToDataUrl(selectedImageFile) : null);
       const savedProduct = (await saveProductFn({
@@ -319,7 +415,7 @@ function DashboardPage() {
       console.error("Failed to save product", error);
       toast.error(`Could not save product: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
-      setSavingProduct(false);
+      setProductSaving(false);
     }
   }
 
@@ -365,6 +461,82 @@ function DashboardPage() {
     }
   }
 
+  function resetOfferForm() {
+    setOfferForm({ title: "", description: "", discount: "", badge: "", image: "", expiresAt: "" });
+    setEditingOfferId(null);
+    setOfferDialogOpen(false);
+  }
+
+  function openOfferDialog(offer?: any) {
+    if (offer) {
+      setEditingOfferId(offer.id);
+      setOfferForm({
+        title: offer.title ?? "",
+        description: offer.description ?? "",
+        discount: offer.discount ?? "",
+        badge: offer.badge ?? "",
+        image: offer.image ?? "",
+        expiresAt: offer.expires_at ? new Date(offer.expires_at).toISOString().slice(0, 16) : "",
+      });
+    } else {
+      setEditingOfferId(null);
+      setOfferForm({ title: "", description: "", discount: "", badge: "", image: "", expiresAt: "" });
+    }
+    setOfferDialogOpen(true);
+  }
+
+  async function handleSaveOffer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!offerForm.title.trim()) {
+      toast.error("Please enter an offer title.");
+      return;
+    }
+
+    setOfferSaving(true);
+    try {
+      const payload = {
+        title: offerForm.title,
+        description: offerForm.description || null,
+        discount: offerForm.discount || null,
+        badge: offerForm.badge || null,
+        image: offerForm.image || null,
+        expiresAt: offerForm.expiresAt || null,
+      };
+
+      const savedOffer = editingOfferId
+        ? ((await updateOfferFn({ data: { id: editingOfferId, ...payload } })) as any)
+        : ((await saveOfferFn({ data: payload })) as any);
+
+      setOffers((prev) => {
+        if (editingOfferId) {
+          return prev.map((offer) => (offer.id === editingOfferId ? savedOffer : offer));
+        }
+        return [savedOffer, ...prev];
+      });
+      resetOfferForm();
+      showFeedback(editingOfferId ? "Offer updated" : "Offer created");
+      toast.success(editingOfferId ? "Offer updated" : "Offer created");
+    } catch (error) {
+      console.error("Failed to save offer", error);
+      showFeedback(`Could not save offer: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
+      toast.error(`Could not save offer: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setOfferSaving(false);
+    }
+  }
+
+  async function handleDeleteOffer(id: string) {
+    if (!window.confirm("Delete this offer?")) return;
+    try {
+      await deleteOfferFn({ data: { id } });
+      setOffers((prev) => prev.filter((offer) => offer.id !== id));
+      toast.success("Offer deleted");
+    } catch (error) {
+      console.error("Failed to delete offer", error);
+      toast.error(`Could not delete offer: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+
   async function handleSaveCategory(e: React.FormEvent) {
     e.preventDefault();
     if (!categoryForm.name.trim()) {
@@ -372,7 +544,7 @@ function DashboardPage() {
       return;
     }
 
-    setSavingCategory(true);
+    setCategorySaving(true);
     try {
       const savedCategory = (await saveCategoryFn({
         data: {
@@ -394,7 +566,7 @@ function DashboardPage() {
       console.error("Failed to save category", error);
       toast.error(`Could not save category: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
-      setSavingCategory(false);
+      setCategorySaving(false);
     }
   }
 
@@ -516,75 +688,6 @@ function DashboardPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveProduct} className="mt-6 grid gap-4 md:grid-cols-2">
-              <label className="text-sm font-medium md:col-span-2">
-                Product name
-                <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <label className="text-sm font-medium">
-                Category
-                <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
-                  <option value="">Select category</option>
-                  {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
-                  <option value="Uncategorized">Uncategorized</option>
-                </select>
-              </label>
-              <label className="text-sm font-medium">
-                Price (KES)
-                <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
-              </label>
-              <label className="text-sm font-medium">
-                Unit
-                <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <label className="text-sm font-medium md:col-span-2">
-                Description
-                <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-              </label>
-              <div className="text-sm font-medium md:col-span-2">
-                <label className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-primary" /> Product image
-                </label>
-                <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-background p-4 sm:flex-row sm:items-center">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={uploadingImage}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      handleProductImageChange(file);
-                      event.target.value = "";
-                    }}
-                    className="block w-full text-sm"
-                  />
-                  {uploadingImage ? (
-                    <span className="inline-flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</span>
-                  ) : null}
-                  {productForm.image_url ? (
-                    <div className="flex items-center gap-3">
-                      <img src={productForm.image_url} alt="Preview" className="h-16 w-16 rounded-xl object-cover" />
-                      <button type="button" onClick={() => setProductForm((prev) => ({ ...prev, image_url: null }))} className="text-xs font-semibold text-destructive hover:underline">Remove</button>
-                    </div>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">Optional. PNG or JPG up to 2MB.</p>
-              </div>
-              <label className="flex items-center gap-3 text-sm font-medium">
-                <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
-                Requires prescription
-              </label>
-              <label className="flex items-center gap-3 text-sm font-medium">
-                <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
-                In stock
-              </label>
-              <div className="md:col-span-2 flex gap-3">
-                <button type="submit" disabled={savingProduct} className="inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
-                  {savingProduct ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingProductId ? "Save product" : "Create product"}
-                </button>
-                {editingProductId ? <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
-              </div>
-            </form>
-
             <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
               <Search className="h-4 w-4 text-primary" />
               <input
@@ -600,9 +703,9 @@ function DashboardPage() {
                 <div key={product.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-4 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-3">
                     {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="h-16 w-16 flex-shrink-0 rounded-xl object-cover" />
+                      <img src={product.image_url} alt={product.name} className="h-16 w-16 shrink-0 rounded-xl object-cover" />
                     ) : (
-                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                         <ImageIcon className="h-5 w-5" />
                       </div>
                     )}
@@ -659,20 +762,22 @@ function DashboardPage() {
                   Description
                   <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
                 </label>
-                {/(skincare|perfumes)/i.test(productForm.category) ? (
-                  <label className="text-sm font-medium md:col-span-2">
-                    Product image
-                    <input type="file" accept="image/*" onChange={(event) => {
+                <label className="text-sm font-medium md:col-span-2">
+                  Product image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingImage}
+                    onChange={(event) => {
                       const file = event.target.files?.[0];
-                      if (!file) return;
-                      setSelectedImageFile(file);
-                      const reader = new FileReader();
-                      reader.onload = () => setProductForm((prev) => ({ ...prev, image_url: typeof reader.result === "string" ? reader.result : null }));
-                      reader.readAsDataURL(file);
-                    }} className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                    {productForm.image_url ? <img src={productForm.image_url} alt="Preview" className="mt-3 h-24 w-full rounded-2xl object-cover" /> : null}
-                  </label>
-                ) : null}
+                      handleProductImageChange(file);
+                      event.target.value = "";
+                    }}
+                    className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3"
+                  />
+                  {productForm.image_url ? <img src={productForm.image_url} alt="Preview" className="mt-3 h-24 w-full rounded-2xl object-cover" /> : null}
+                  {uploadingImage ? <p className="mt-2 text-xs text-muted-foreground">Preparing image…</p> : null}
+                </label>
                 <label className="flex items-center gap-3 text-sm font-medium">
                   <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
                   Requires prescription
@@ -693,6 +798,94 @@ function DashboardPage() {
           </Dialog>
 
           <section className="space-y-6">
+            <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 text-primary">
+                    <Gift className="h-5 w-5" />
+                    <h2 className="font-display text-2xl font-semibold">Offers</h2>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">Create promotional offers that will appear on the public offers page.</p>
+                </div>
+                <button onClick={() => openOfferDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+                  <Plus className="h-4 w-4" /> New offer
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {offers.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">No offers created yet.</div>
+                ) : (
+                  offers.map((offer) => (
+                    <div key={offer.id} className="rounded-2xl border border-border bg-background px-4 py-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <h3 className="font-semibold">{offer.title}</h3>
+                          <p className="mt-1 text-sm text-muted-foreground">{offer.description || "No description"}</p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            {offer.discount ? <span className="rounded-full bg-primary/10 px-2.5 py-1 text-primary">{offer.discount}</span> : null}
+                            {offer.badge ? <span className="rounded-full bg-muted px-2.5 py-1">{offer.badge}</span> : null}
+                            {offer.expires_at ? <span className="rounded-full bg-muted px-2.5 py-1">Expires {new Date(offer.expires_at).toLocaleString()}</span> : null}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => openOfferDialog(offer)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
+                            <PencilLine className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleDeleteOffer(offer.id)} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <Dialog open={offerDialogOpen} onOpenChange={(open) => (open ? setOfferDialogOpen(true) : resetOfferForm())}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingOfferId ? "Edit offer" : "New offer"}</DialogTitle>
+                  <DialogDescription>Create or update a promotional offer for the public offers page.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSaveOffer} className="mt-4 grid gap-4">
+                  <label className="block text-sm font-medium">
+                    Offer title
+                    <input value={offerForm.title} onChange={(e) => setOfferForm((prev) => ({ ...prev, title: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Description
+                    <textarea value={offerForm.description} onChange={(e) => setOfferForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                  </label>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block text-sm font-medium">
+                      Discount
+                      <input value={offerForm.discount} onChange={(e) => setOfferForm((prev) => ({ ...prev, discount: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="15%" />
+                    </label>
+                    <label className="block text-sm font-medium">
+                      Badge
+                      <input value={offerForm.badge} onChange={(e) => setOfferForm((prev) => ({ ...prev, badge: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="Limited time" />
+                    </label>
+                  </div>
+                  <label className="block text-sm font-medium">
+                    Image URL
+                    <input value={offerForm.image} onChange={(e) => setOfferForm((prev) => ({ ...prev, image: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="/assets/hero.jpg" />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Expires at
+                    <input type="datetime-local" value={offerForm.expiresAt} onChange={(e) => setOfferForm((prev) => ({ ...prev, expiresAt: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                  </label>
+                  <DialogFooter>
+                    <button type="button" onClick={resetOfferForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+                    <button type="submit" disabled={offerSaving} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                      {offerSaving ? (editingOfferId ? "Saving..." : "Creating...") : (editingOfferId ? "Save offer" : "Create offer")}
+                    </button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
             <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -775,23 +968,6 @@ function DashboardPage() {
                   <Plus className="h-4 w-4" /> New
                 </button>
               </div>
-
-              <form onSubmit={handleSaveCategory} className="mt-6 space-y-4">
-                <label className="block text-sm font-medium">
-                  Category name
-                  <input value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                </label>
-                <label className="block text-sm font-medium">
-                  Description
-                  <textarea value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                </label>
-                <div className="flex gap-3">
-                  <button type="submit" disabled={savingCategory} className="inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
-                    {savingCategory ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingCategoryId ? "Save category" : "Create category"}
-                  </button>
-                  {editingCategoryId ? <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
-                </div>
-              </form>
 
               <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
                 <Search className="h-4 w-4 text-primary" />

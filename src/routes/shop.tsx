@@ -7,6 +7,7 @@ import { Reveal } from "../components/site/Reveal";
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
+import productPlaceholder from "../assets/product-placeholder.svg";
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
@@ -155,21 +156,34 @@ function ShopPage() {
                             </span>
                           )}
                         </div>
+                        <img
+                          src={p.image_url ?? productPlaceholder}
+                          alt={p.name}
+                          className="mt-5 aspect-[4/3] w-full rounded-[1rem] object-cover border border-border"
+                          loading="lazy"
+                        />
                         <p className="mt-3 text-sm text-muted-foreground leading-relaxed flex-1">{p.description}</p>
+                        {!p.in_stock ? (
+                          <span className="mt-4 inline-flex w-fit rounded-full border border-destructive/20 bg-destructive/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
+                            Out of stock
+                          </span>
+                        ) : null}
                         <div className="mt-5 flex items-center justify-between gap-3">
                           <span className="font-display text-xl font-bold text-primary">{formatKES(price)}</span>
                           <button
                             onClick={() => {
+                              if (!p.in_stock) return;
                               add({ id: p.id, name: p.name, price, category: p.category });
                               setJustAdded(p.id);
                               window.setTimeout(() => setJustAdded((v) => (v === p.id ? null : v)), 1200);
                             }}
+                            disabled={!p.in_stock}
                             className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
                               added ? "bg-primary/10 text-primary" : "btn-gradient"
-                            }`}
+                            } ${!p.in_stock ? "cursor-not-allowed opacity-60" : ""}`}
                           >
                             {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                            {added ? "Added" : "Add to cart"}
+                            {added ? "Added" : p.in_stock ? "Add to cart" : "Out of stock"}
                           </button>
                         </div>
                       </article>

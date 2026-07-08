@@ -31,7 +31,7 @@ export function Footer() {
         <div>
           <h4 className="font-display font-semibold mb-4">Quick Links</h4>
           <ul className="space-y-2.5 text-sm text-muted-foreground">
-            {[['/about','About Us'],['/laboratory','Laboratory'],['/pharmacy','Pharmacy'],['/skincare','Skincare'],['/perfumes','Perfumes'],['/home-services','Home Services'],['/contact','Contact'],['/dashboard','Dashboard']].map(([to,label]) => (
+            {[['/about','About Us'],['/services','Services'],['/pharmacy','Pharmacy'],['/skincare','Skincare'],['/perfumes','Perfumes'],['/home-services','Home Services'],['/contact','Contact'],['/dashboard','Dashboard']].map(([to,label]) => (
               <li key={to}><Link to={to} className="hover:text-primary">{label}</Link></li>
             ))}
           </ul>
