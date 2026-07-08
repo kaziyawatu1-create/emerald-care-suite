@@ -1,10 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
 import { formatServiceType, readServices, type ServiceItem } from "../lib/services";
-import pathcareLogo from "../assets/pathcare-logo.svg";
 
 export const Route = createFileRoute("/services")({
   head: () => ({
@@ -32,39 +30,6 @@ function ServicesPage() {
         title="Flexible healthcare support for every routine"
         subtitle="Choose from in-house care and at-home visits designed around your schedule and comfort."
       />
-
-      <section className="section-pad pb-0">
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
-          <Reveal>
-            <div className="rounded-4xl border border-border bg-linear-to-br from-primary/8 to-primary/4 p-6 shadow-soft md:p-8">
-              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                <div className="max-w-2xl">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-                    PathCare collaboration
-                  </span>
-                  <h2 className="mt-4 font-display text-3xl font-bold">Laboratory services are coordinated through our trusted PathCare partnership.</h2>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    These diagnostic services are arranged through PathCare and are not directly offered by Nuno Pharmacy, so we make that partnership clear for every visitor.
-                  </p>
-                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-foreground/85">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5">
-                      <Check className="h-4 w-4 text-primary" /> Trusted diagnostics
-                    </span>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5">
-                      <Check className="h-4 w-4 text-primary" /> Clear service coordination
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center">
-                  <div className="rounded-[1.5rem] border border-border bg-white p-5 shadow-soft">
-                    <img src={pathcareLogo} alt="PathCare logo" className="h-24 w-24 object-contain" loading="lazy" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
 
       <section className="section-pad">
         <div className="mx-auto max-w-7xl px-4 md:px-8">

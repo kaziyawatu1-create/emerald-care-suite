@@ -1,8 +1,8 @@
 import heroPharmacist from "../assets/hero-pharmacist.jpg";
 import serviceLab from "../assets/tech1.png";
 import servicePharmacy from "../assets/service-pharmacy.jpg";
-import serviceSkincare from "../assets/skincare11.png";
-import servicePerfumes from "../assets/perfumes1.png";
+import serviceSkincare from "../assets/service-skincare.jpg";
+import servicePerfumes from "../assets/service-perfumes.jpg";
 import servicePrescription from "../assets/tech2.png";
 import homeCollection from "../assets/home.jpg";
 import labWide from "../assets/lab-wide.jpg";
@@ -42,7 +42,7 @@ export const serviceCategories = [
     title: "Laboratory Services",
     description: "Rapid HIV testing, blood tests, malaria testing, H. pylori testing and home sample collection.",
     image: serviceLab,
-    href: "/services",
+    href: "/laboratory",
     points: [
       "Rapid HIV Testing",
       "Accurate Blood Tests",
@@ -53,7 +53,7 @@ export const serviceCategories = [
       "In-house Laboratory Testing",
       "Home Healthcare Services",
     ],
-    cta: "Explore Services",
+    cta: "Book Lab Test",
   },
   {
     title: "Pharmacy",
@@ -85,10 +85,10 @@ export const serviceCategories = [
   },
   {
     title: "Skincare Products",
-    description: "Premium skincare including facial serums, gentle cleansers, moisturizers, sunscreens and acne solutions.",
+    description: "Premium skincare including Yusra, CeraVe, cleansers, moisturizers, sunscreens and acne solutions.",
     image: serviceSkincare,
     href: "/skincare",
-    points: ["Facial Serums", "Gentle Cleansers", "Moisturizers", "Sunscreens", "Acne Solutions", "Body Care"],
+    points: ["Yusra", "CeraVe", "Facial Cleansers", "Moisturizers", "Sunscreens", "Acne Solutions"],
     cta: "Explore Skincare",
   },
   {
@@ -219,13 +219,13 @@ export const pharmacyCategories = [
 
 export const skincareCollections = [
   {
-    name: "Hydrating Serums",
-    description: "Lightweight serums that boost moisture and leave skin looking radiant.",
+    name: "Yusra",
+    description: "Brightening and balancing formulas designed for a refined daily routine.",
     image: serviceSkincare,
   },
   {
-    name: "Gentle Cleansers",
-    description: "Soft, effective cleansers that refresh skin without over-drying it.",
+    name: "CeraVe",
+    description: "Barrier-supporting moisturizers and cleansers trusted for sensitive skin.",
     image: serviceSkincare,
   },
   {

@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Plus, Check, ShoppingBag, AlertCircle } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
+import { ProductCardSkeleton } from "../components/site/ProductSkeleton";
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
-import productPlaceholder from "../assets/product-placeholder.svg";
+
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
@@ -121,7 +122,17 @@ function ShopPage() {
             ))}
           </div>
 
-          {isLoading && <p className="text-muted-foreground">Loading catalogue…</p>}
+          {isLoading && products.length === 0 && (
+            <div className="mb-14">
+              <div className="flex items-baseline gap-3 mb-5">
+                <div className="h-8 w-40 rounded bg-muted animate-pulse" />
+                <div className="h-4 w-16 rounded bg-muted animate-pulse" />
+              </div>
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)}
+              </div>
+            </div>
+          )}
           {error && (
             <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive flex items-center gap-3">
               <AlertCircle className="h-5 w-5" /> Could not load products. Please refresh.
@@ -131,6 +142,7 @@ function ShopPage() {
           {!isLoading && Object.keys(grouped).length === 0 && (
             <p className="text-muted-foreground">No medicines match your search.</p>
           )}
+
 
           {Object.entries(grouped).map(([cat, list]) => (
             <div key={cat} className="mb-14">
@@ -156,34 +168,21 @@ function ShopPage() {
                             </span>
                           )}
                         </div>
-                        <img
-                          src={p.image_url ?? productPlaceholder}
-                          alt={p.name}
-                          className="mt-5 aspect-[4/3] w-full rounded-[1rem] object-cover border border-border"
-                          loading="lazy"
-                        />
                         <p className="mt-3 text-sm text-muted-foreground leading-relaxed flex-1">{p.description}</p>
-                        {!p.in_stock ? (
-                          <span className="mt-4 inline-flex w-fit rounded-full border border-destructive/20 bg-destructive/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
-                            Out of stock
-                          </span>
-                        ) : null}
                         <div className="mt-5 flex items-center justify-between gap-3">
                           <span className="font-display text-xl font-bold text-primary">{formatKES(price)}</span>
                           <button
                             onClick={() => {
-                              if (!p.in_stock) return;
                               add({ id: p.id, name: p.name, price, category: p.category });
                               setJustAdded(p.id);
                               window.setTimeout(() => setJustAdded((v) => (v === p.id ? null : v)), 1200);
                             }}
-                            disabled={!p.in_stock}
                             className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
                               added ? "bg-primary/10 text-primary" : "btn-gradient"
-                            } ${!p.in_stock ? "cursor-not-allowed opacity-60" : ""}`}
+                            }`}
                           >
                             {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                            {added ? "Added" : p.in_stock ? "Add to cart" : "Out of stock"}
+                            {added ? "Added" : "Add to cart"}
                           </button>
                         </div>
                       </article>

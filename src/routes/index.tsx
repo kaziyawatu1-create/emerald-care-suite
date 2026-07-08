@@ -10,21 +10,17 @@ import {
   MapPin,
   Clock3,
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   Microscope,
   HeartPulse,
   Pill,
   Sparkles,
-  ShoppingCart,
 } from "lucide-react";
 import { Counter } from "../components/site/Counter";
 import { Reveal } from "../components/site/Reveal";
 import { TestimonialsCarousel } from "../components/site/TestimonialsCarousel";
-import pathcareLogo from "../assets/pathcare-logo.svg";
-import { useEffect, useState, type FormEvent } from "react";
 import {
   featuredProducts,
+  heroImage,
   homeVisitImage,
   labWideImage,
   partners,
@@ -32,10 +28,6 @@ import {
   whyChooseItems,
   shopWideImage
 } from "../lib/site-data";
-import hero1 from "../assets/medix.png"
-import hero3 from "../assets/skincare11.png"
-import hero6 from "../assets/perfumes1.png"
-import hero from "../assets/hero-pharmacist.jpg"
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -59,190 +51,71 @@ export const Route = createFileRoute("/")({
 
 const whyIcons = [ShieldCheck, FlaskConical, Stethoscope, Wallet];
 const featureIcons = [Microscope, Pill, HeartPulse, Sparkles];
-const heroSlides = [
-  { image: hero1, title: "All sorts of medication", subtitle: "Clean formulations and everyday wellness for every routine." },
-  { image: hero3, title: "Skin care products", subtitle: "Elegant fragrances for every occasion and personal style." },
-  { image: hero6, title: "Premium fragrances", subtitle: "Elegant fragrances for every occasion and personal style." },
-  {}
-];
-const heroAccentWords = ["Wellness", "Care", "Balance", "Vitality"];
 
 function Index() {
-  const [bookingForm, setBookingForm] = useState({
-    name: "",
-    locationType: "In House",
-    preferredDate: "",
-    contact: "",
-    pinLocation: "",
-    testType: "Rapid HIV Testing",
-  });
-  const [bookingStatus, setBookingStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({
-    type: "idle",
-    message: "",
-  });
-  const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
-  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
-  const [activeHeroWord, setActiveHeroWord] = useState(0);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
-    }, 5000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setActiveHeroWord((current) => (current + 1) % heroAccentWords.length);
-    }, 2600);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
-
-  const goToNextSlide = () => {
-    setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
-  };
-
-  const goToPreviousSlide = () => {
-    setActiveHeroSlide((current) => (current - 1 + heroSlides.length) % heroSlides.length);
-  };
-
-  const handleBookingSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!bookingForm.name || !bookingForm.contact || !bookingForm.preferredDate || !bookingForm.pinLocation) {
-      setBookingStatus({ type: "error", message: "Please complete all required fields to request a booking." });
-      return;
-    }
-
-    setIsBookingSubmitting(true);
-    setBookingStatus({ type: "idle", message: "" });
-
-    try {
-      const response = await fetch("/api/public/book-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookingForm),
-      });
-
-      const data = await response.json().catch(() => ({ success: false, message: "Unable to send your booking request right now." }));
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "Unable to send your booking request right now.");
-      }
-
-      setBookingStatus({
-        type: "success",
-        message: `Thank you ${bookingForm.name}. We have sent your booking request and will contact you shortly.`,
-      });
-      setBookingForm({
-        name: "",
-        locationType: "In House",
-        preferredDate: "",
-        contact: "",
-        pinLocation: "",
-        testType: "Rapid HIV Testing",
-      });
-    } catch (error) {
-      setBookingStatus({
-        type: "error",
-        message: error instanceof Error ? error.message : "Unable to send your booking request right now.",
-      });
-    } finally {
-      setIsBookingSubmitting(false);
-    }
-  };
-
   return (
     <>
-      <section className="w-screen bg-slate-50">
-        <div className="relative w-full overflow-hidden">
-          <div className="mx-auto grid w-full grid-cols-1 overflow-hidden border border-border/60 bg-card shadow-elegant lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="flex h-full flex-col justify-center bg-gradient-to-br from-primary/10 via-background to-gold/10 p-8 md:p-10 lg:p-12">
-              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                Wellness starts here
-              </span>
-              <h1 className="mt-6 font-display text-3xl font-bold leading-tight text-foreground md:text-4xl lg:text-5xl">
-                <span key={heroAccentWords[activeHeroWord]} className="block text-primary transition-all duration-700 ease-out">
-                  {heroAccentWords[activeHeroWord]}
-                </span>
-                <span className="mt-2 block text-foreground/90">for every visit, every routine, and every moment of care.</span>
-              </h1>
-              <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
-                Discover trusted medicines, professional lab support, skincare essentials, and home care delivered with premium care.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  to="/shop"
-                  className="group inline-flex items-center gap-2 rounded-full bg-[#0f2a4a] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(15,42,74,0.28)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.03] hover:bg-[#132f5a]"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  Shop Now
-                </Link>
-                <Link to="/#book-a-test" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-[0_10px_30px_rgba(16,185,129,0.28)] transition-colors duration-300 hover:bg-primary/90">
-                  <Stethoscope className="h-4 w-4" />
-                  Book a Test
-                </Link>
-              </div>
+      <section className="relative overflow-hidden border-b border-border bg-[linear-gradient(180deg,color-mix(in_oklab,var(--primary)_5%,var(--background)),var(--background))]">
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,color-mix(in_oklab,var(--foreground)_48%,transparent),color-mix(in_oklab,var(--foreground)_12%,transparent))]" />
+        <img
+          src={shopWideImage}
+          alt="Modern pharmacy laboratory interior"
+          className="absolute inset-0 h-full w-full object-cover mix-blend-multiply opacity-40"
+          width={1600}
+          height={1200}
+        />
+        <div className="relative mx-auto grid min-h-[calc(100vh-4.5rem)] max-w-7xl items-center gap-14 px-4 py-14 md:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-20">
+          <Reveal className="text-primary-foreground">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/8 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
+              Premium Medical + Modern Luxury
+            </span>
+            <h1 className="mt-6 font-display text-5xl font-bold leading-[0.95] md:text-7xl">
+              Welness starts here.
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg md:text-2xl font-medium text-primary-foreground/90">
+              Quality Medicines. Reliable Laboratory Services. Professional Healthcare Solutions.
+            </p>
+            <p className="mt-6 max-w-2xl text-base md:text-lg leading-relaxed text-primary-foreground/78">
+              Providing genuine medicines, accurate laboratory testing, skincare products, vitamins,
+              perfumes, and professional pharmaceutical care for individuals, families, and businesses.
+            </p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Link to="/laboratory" className="rounded-full bg-primary-foreground px-7 py-3.5 text-sm font-display font-semibold text-foreground shadow-elegant transition-transform hover:-translate-y-0.5">
+                Book Lab Test
+              </Link>
+              <Link to="/pharmacy" className="rounded-full border border-primary-foreground/25 bg-primary-foreground/8 px-7 py-3.5 text-sm font-display font-semibold text-primary-foreground backdrop-blur-sm transition-colors hover:bg-primary-foreground/14">
+                Shop Medicines
+              </Link>
             </div>
-
-            <div className="relative h-96 w-full md:h-[400px] lg:h-full">
+            <div className="mt-10 grid max-w-2xl gap-4 sm:grid-cols-3">
               {[
-                { img: hero1, alt: "Premium skincare essentials" },
-                { img: hero3, alt: "Premium skincare essentials" },
-                { img: hero6, alt: "Premium fragrances" },
-              ].map((item, index) => (
-                <img
-                  key={index}
-                  src={item.img}
-                  alt={item.alt}
-                  className={`absolute inset-0 h-full w-full object-cover object-center bg-slate-100 transition-all duration-700 ease-out ${
-                    index === activeHeroSlide ? "opacity-100 scale-100" : "opacity-0 scale-105"
-                  }`}
-                  loading="lazy"
-                  width={1000}
-                  height={400}
-                />
+                ["15+", "Years Experience"],
+                ["10,000+", "Satisfied Customers"],
+                ["24/7", "Customer Support"],
+              ].map(([value, label]) => (
+                <div key={label} className="rounded-[var(--radius-xl)] border border-primary-foreground/15 bg-primary-foreground/8 px-5 py-4 backdrop-blur-sm">
+                  <div className="text-2xl font-display font-bold">{value}</div>
+                  <div className="mt-1 text-sm text-primary-foreground/72">{label}</div>
+                </div>
               ))}
-
-              <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between px-3 sm:px-4">
-                <button
-                  type="button"
-                  onClick={goToPreviousSlide}
-                  className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-slate-950/70 text-white shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-slate-950/85"
-                  aria-label="Previous slide"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={goToNextSlide}
-                  className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-slate-950/70 text-white shadow-lg backdrop-blur-sm transition hover:scale-105 hover:bg-slate-950/85"
-                  aria-label="Next slide"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2">
-                {[
-                  { img: hero1, alt: "Trusted pharmacy care" },
-                  { img: hero3, alt: "Premium skincare essentials" },
-                  { img: hero6, alt: "Premium fragrances" },
-                ].map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveHeroSlide(index)}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      index === activeHeroSlide ? "w-8 bg-white" : "w-2 bg-white/50 hover:bg-white/75"
-                    }`}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
-              </div>
             </div>
-          </div>
+          </Reveal>
+
+          <Reveal delay={120} className="relative lg:justify-self-end">
+            <div className="relative overflow-hidden rounded-[calc(var(--radius-3xl)+8px)] border border-primary-foreground/15 bg-primary-foreground/8 p-3 backdrop-blur-sm shadow-elegant">
+              <img
+                src={heroImage}
+                alt="Professional pharmacist in a modern pharmacy"
+                className="aspect-[4/5] w-full rounded-[calc(var(--radius-3xl))] object-cover"
+                width={1280}
+                height={1600}
+              />
+            </div>
+            <div className="absolute -left-4 bottom-6 rounded-[var(--radius-xl)] border border-border bg-card px-4 py-4 shadow-soft sm:-left-10">
+              <div className="text-sm font-semibold text-muted-foreground">Trusted service</div>
+              <div className="mt-1 font-display text-xl font-bold">Certified lab & pharmacy</div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -280,15 +153,9 @@ function Index() {
           <Reveal>
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gold">
-                    Our Services
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                    <img src={pathcareLogo} alt="PathCare" className="h-4 w-4 object-contain" loading="lazy" />
-                    Collaboration with PathCare Lab Services
-                  </span>
-                </div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gold">
+                  Our Services
+                </span>
                 <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Healthcare solutions across every need</h2>
               </div>
               <p className="max-w-xl text-muted-foreground">
@@ -317,19 +184,8 @@ function Index() {
                       })() : null}
                       <span className="text-sm font-semibold uppercase tracking-wider">Premium service</span>
                     </div>
-                    {service.title === "Laboratory Services" ? (
-                      <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                        <img src={pathcareLogo} alt="PathCare" className="h-4 w-4 object-contain" loading="lazy" />
-                        <span>PathCare collaborator</span>
-                      </div>
-                    ) : null}
                     <h3 className="mt-4 font-display text-2xl font-bold">{service.title}</h3>
                     <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
-                    {service.title === "Laboratory Services" ? (
-                      <p className="mt-3 text-sm text-primary/90">
-                        These services are coordinated through our PathCare partnership and are not directly offered by Nuno Pharmacy.
-                      </p>
-                    ) : null}
                     <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                       {service.points.map((point) => (
                         <li key={point} className="flex gap-2 text-sm text-foreground/85">
@@ -347,110 +203,6 @@ function Index() {
               </Reveal>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section id="book-a-test" className="section-pad">
-        <div className="mx-auto max-w-7xl px-4 md:px-8 grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-          <Reveal>
-            <div className="rounded-[var(--radius-3xl)] border border-border bg-card p-8 shadow-elegant">
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
-                Book a Test
-              </span>
-              <h2 className="mt-5 font-display text-3xl md:text-4xl font-bold">Request your lab test in minutes</h2>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                Choose your preferred location, date, and test type. We will confirm your booking and share the next steps.
-              </p>
-              <form onSubmit={handleBookingSubmit} className="mt-6 grid gap-4">
-                <input
-                  value={bookingForm.name}
-                  onChange={(event) => setBookingForm((current) => ({ ...current, name: event.target.value }))}
-                  className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                  placeholder="Full name"
-                  aria-label="Full name"
-                  required
-                />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <select
-                    value={bookingForm.locationType}
-                    onChange={(event) => setBookingForm((current) => ({ ...current, locationType: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    aria-label="Service location"
-                  >
-                    <option>In House</option>
-                    <option>Home</option>
-                    <option>Office</option>
-                  </select>
-                  <input
-                    type="date"
-                    value={bookingForm.preferredDate}
-                    onChange={(event) => setBookingForm((current) => ({ ...current, preferredDate: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    aria-label="Preferred date"
-                    required
-                  />
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <input
-                    value={bookingForm.contact}
-                    onChange={(event) => setBookingForm((current) => ({ ...current, contact: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    placeholder="Phone or email"
-                    aria-label="Contact"
-                    required
-                  />
-                  <select
-                    value={bookingForm.testType}
-                    onChange={(event) => setBookingForm((current) => ({ ...current, testType: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    aria-label="Type of test"
-                  >
-                    <option>Rapid HIV Testing</option>
-                    <option>Blood Sugar Test</option>
-                    <option>Malaria Testing</option>
-                    <option>H. pylori Test</option>
-                    <option>Blood Grouping</option>
-                    <option>Home Sample Collection</option>
-                    <option>Office Sample Collection</option>
-                  </select>
-                </div>
-                <textarea
-                  value={bookingForm.pinLocation}
-                  onChange={(event) => setBookingForm((current) => ({ ...current, pinLocation: event.target.value }))}
-                  className="min-h-24 rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                  placeholder="Pin or location details"
-                  aria-label="Pin or location details"
-                  required
-                />
-                {bookingStatus.message ? (
-                  <p className={`text-sm ${bookingStatus.type === "success" ? "text-emerald-600" : "text-red-600"}`}>
-                    {bookingStatus.message}
-                  </p>
-                ) : null}
-                <button
-                  type="submit"
-                  disabled={isBookingSubmitting}
-                  className="inline-flex w-fit items-center gap-2 rounded-full btn-gradient px-6 py-3 text-sm font-display font-semibold disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isBookingSubmitting ? "Submitting..." : "Request Booking"}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </form>
-            </div>
-          </Reveal>
-
-          <Reveal delay={80}>
-            <div className="overflow-hidden rounded-[var(--radius-3xl)] border border-border bg-card p-3 shadow-elegant">
-              <img
-                src={labWideImage}
-                alt="Professional laboratory services"
-                className="aspect-[4/3] w-full rounded-[calc(var(--radius-3xl)-6px)] object-cover"
-                loading="lazy"
-                width={1600}
-                height={1200}
-              />
-            </div>
-          </Reveal>
         </div>
       </section>
 
@@ -490,9 +242,9 @@ function Index() {
                 </div>
               ))}
             </div>
-            <a href="#book-a-test" className="mt-8 inline-flex rounded-full btn-gradient px-7 py-3.5 text-sm font-display font-semibold">
-              Book a Test
-            </a>
+            <Link to="/laboratory" className="mt-8 inline-flex rounded-full btn-gradient px-7 py-3.5 text-sm font-display font-semibold">
+              Book Appointment
+            </Link>
           </Reveal>
         </div>
       </section>
