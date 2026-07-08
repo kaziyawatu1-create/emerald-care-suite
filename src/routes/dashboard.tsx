@@ -210,7 +210,6 @@ function DashboardPage() {
     setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
     setSelectedImageFile(null);
     setEditingProductId(null);
-    setProductDialogOpen(false);
   }
 
   function openProductDialog(product?: ProductItem) {
@@ -232,27 +231,12 @@ function DashboardPage() {
       setSelectedImageFile(null);
       setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null });
     }
-    setProductDialogOpen(true);
-  }
-
-  function showFeedback(message: string, type: "success" | "error" = "success") {
-    setFeedback({ type, message });
-    window.setTimeout(() => setFeedback((prev) => (prev?.message === message ? null : prev)), 3500);
-  }
-
-  function fileToDataUrl(file: File) {
-    return new Promise<string | null>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(file);
-    });
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function resetCategoryForm() {
     setCategoryForm({ name: "", description: "" });
     setEditingCategoryId(null);
-    setCategoryDialogOpen(false);
   }
 
   function openCategoryDialog(category?: CategoryItem) {
@@ -263,25 +247,8 @@ function DashboardPage() {
       setEditingCategoryId(null);
       setCategoryForm({ name: "", description: "" });
     }
-    setCategoryDialogOpen(true);
   }
 
-  function resetServiceForm() {
-    setServiceForm({ name: "", description: "", type: "inhouse" });
-    setEditingServiceId(null);
-    setServiceDialogOpen(false);
-  }
-
-  function openServiceDialog(service?: ServiceItem) {
-    if (service) {
-      setEditingServiceId(service.id);
-      setServiceForm({ name: service.name, description: service.description, type: service.type });
-    } else {
-      setEditingServiceId(null);
-      setServiceForm({ name: "", description: "", type: "inhouse" });
-    }
-    setServiceDialogOpen(true);
-  }
 
   async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
