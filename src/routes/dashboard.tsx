@@ -259,7 +259,7 @@ function DashboardPage() {
 
     setSavingProduct(true);
     try {
-      const imageUrl = productForm.image_url ?? (selectedImageFile ? await fileToDataUrl(selectedImageFile) : null);
+      const imageUrl = productForm.image_url ?? null;
       const savedProduct = (await saveProductFn({
         data: {
           id: editingProductId ?? undefined,
