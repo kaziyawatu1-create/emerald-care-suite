@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import pathwayLabLogo from "../assets/pathway-lab-logo.svg";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
 import { formatServiceType, readServices, type ServiceItem } from "../lib/services";
@@ -33,6 +34,15 @@ function ServicesPage() {
 
       <section className="section-pad">
         <div className="mx-auto max-w-7xl px-4 md:px-8">
+          <Reveal>
+            <div className="mb-8 flex flex-wrap items-center gap-4 rounded-[var(--radius-2xl)] border border-primary/20 bg-primary/5 p-5 shadow-soft">
+              <img src={pathwayLabLogo} alt="Pathway Lab logo" className="h-14 w-14 rounded-full border border-border bg-white p-1" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Collaborating with Pathway Lab</p>
+                <p className="text-sm text-muted-foreground">We partner with Pathway Lab for trusted diagnostics, professional sample handling and coordinated healthcare support.</p>
+              </div>
+            </div>
+          </Reveal>
           <div className="grid gap-6 lg:grid-cols-3">
             {featuredServices.map((service, index) => (
               <Reveal key={service.id} delay={index * 50}>

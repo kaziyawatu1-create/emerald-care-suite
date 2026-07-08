@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Gift, Menu, ShoppingBag, UserRound, X } from "lucide-react";
+import { Gift, Mail, Menu, Phone, ShoppingBag, Sparkles, UserRound, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import logoImage from "@/assets/LOGO.jpg";
 
@@ -30,6 +30,24 @@ export function Navbar() {
 
   return (
     <header className={`sticky top-0 z-50 glass-nav transition-all ${scrolled ? "shadow-soft" : ""}`}>
+      <div className="border-b border-white/20 bg-linear-to-r from-primary via-primary/90 to-gold/90 text-primary-foreground">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm font-medium md:px-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
+              <Sparkles className="h-3.5 w-3.5" />
+              Free delivery for orders within Nairobi
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <a href="tel:+254700000000" className="inline-flex items-center gap-1.5 hover:opacity-90">
+              <Phone className="h-3.5 w-3.5" /> +254 700 000 000
+            </a>
+            <a href="mailto:hello@nuno.co.ke" className="inline-flex items-center gap-1.5 hover:opacity-90">
+              <Mail className="h-3.5 w-3.5" /> hello@nuno.co.ke
+            </a>
+          </div>
+        </div>
+      </div>
       <div className="mx-auto max-w-7xl px-4 py-3 md:px-8">
         <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
           <Link to="/" className="flex items-center gap-2.5 group lg:min-w-60">
@@ -81,18 +99,29 @@ export function Navbar() {
             </div>
 
             <nav className="hidden lg:flex items-center justify-end gap-1 flex-wrap">
-              {links.map((l) => (
-                <Link
-                  key={l.to}
-                  to={l.to}
-                  activeOptions={{ exact: l.to === "/" }}
-                  activeProps={{ className: "text-primary bg-primary/8" }}
-                  inactiveProps={{ className: "text-foreground/75 hover:text-primary hover:bg-primary/5" }}
-                  className="rounded-full px-3.5 py-2 text-sm font-medium transition-colors"
-                >
-                  {l.label}
-                </Link>
-              ))}
+              {links.map((l) => {
+                const iconMap: Record<string, React.ReactElement> = {
+                  "/": <Sparkles className="h-4 w-4" />,
+                  "/about": <UserRound className="h-4 w-4" />,
+                  "/shop": <ShoppingBag className="h-4 w-4" />,
+                  "/services": <Gift className="h-4 w-4" />,
+                  "/contact": <Mail className="h-4 w-4" />,
+                };
+
+                return (
+                  <Link
+                    key={l.to}
+                    to={l.to}
+                    activeOptions={{ exact: l.to === "/" }}
+                    activeProps={{ className: "text-primary bg-primary/8" }}
+                    inactiveProps={{ className: "text-foreground/75 hover:text-primary hover:bg-primary/5" }}
+                    className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors"
+                  >
+                    {iconMap[l.to]}
+                    {l.label}
+                  </Link>
+                );
+              })}
               <Link
                 to="/laboratory"
                 className="rounded-full btn-gradient px-4 py-2.5 text-sm font-semibold font-display"
@@ -107,19 +136,30 @@ export function Navbar() {
       {open && (
         <div className="lg:hidden border-t border-border bg-background/95 backdrop-blur">
           <div className="mx-auto max-w-7xl px-4 py-3 grid gap-1">
-            {links.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                onClick={() => setOpen(false)}
-                activeOptions={{ exact: l.to === "/" }}
-                activeProps={{ className: "text-primary bg-primary/10" }}
-                inactiveProps={{ className: "text-foreground/80" }}
-                className="rounded-xl px-3 py-2.5 text-sm font-medium"
-              >
-                {l.label}
-              </Link>
-            ))}
+            {links.map((l) => {
+              const iconMap: Record<string, React.ReactElement> = {
+                "/": <Sparkles className="h-4 w-4" />,
+                "/about": <UserRound className="h-4 w-4" />,
+                "/shop": <ShoppingBag className="h-4 w-4" />,
+                "/services": <Gift className="h-4 w-4" />,
+                "/contact": <Mail className="h-4 w-4" />,
+              };
+
+              return (
+                <Link
+                  key={l.to}
+                  to={l.to}
+                  onClick={() => setOpen(false)}
+                  activeOptions={{ exact: l.to === "/" }}
+                  activeProps={{ className: "text-primary bg-primary/10" }}
+                  inactiveProps={{ className: "text-foreground/80" }}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium"
+                >
+                  {iconMap[l.to]}
+                  {l.label}
+                </Link>
+              );
+            })}
             <Link
               to="/shop"
               onClick={() => setOpen(false)}

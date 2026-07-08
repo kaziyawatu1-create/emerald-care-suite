@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
-
+import productPlaceholder from "../assets/product-placeholder.svg";
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
@@ -23,6 +23,21 @@ export const Route = createFileRoute("/shop")({
 });
 
 type Product = CatalogProduct;
+
+function ProductCardSkeleton() {
+  return (
+    <div className="h-full flex flex-col rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft">
+      <div className="h-40 w-full rounded-2xl bg-muted animate-pulse" />
+      <div className="mt-4 h-5 w-2/3 rounded bg-muted animate-pulse" />
+      <div className="mt-3 h-4 w-full rounded bg-muted/80 animate-pulse" />
+      <div className="mt-2 h-4 w-4/5 rounded bg-muted/70 animate-pulse" />
+      <div className="mt-6 flex items-center justify-between">
+        <div className="h-6 w-20 rounded bg-muted animate-pulse" />
+        <div className="h-10 w-24 rounded-full bg-muted animate-pulse" />
+      </div>
+    </div>
+  );
+}
 
 function ShopPage() {
   const [query, setQuery] = useState("");

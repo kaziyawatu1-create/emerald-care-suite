@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   ShieldCheck,
   FlaskConical,
@@ -18,6 +19,7 @@ import {
 import { Counter } from "../components/site/Counter";
 import { Reveal } from "../components/site/Reveal";
 import { TestimonialsCarousel } from "../components/site/TestimonialsCarousel";
+import pathwayLabLogo from "../assets/pathway-lab-logo.svg";
 import {
   featuredProducts,
   heroImage,
@@ -53,6 +55,17 @@ const whyIcons = [ShieldCheck, FlaskConical, Stethoscope, Wallet];
 const featureIcons = [Microscope, Pill, HeartPulse, Sparkles];
 
 function Index() {
+  const heroSlides = [heroImage, shopWideImage, labWideImage, homeVisitImage];
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [heroSlides.length]);
+
   return (
     <>
       <section className="relative overflow-hidden border-b border-border bg-[linear-gradient(180deg,color-mix(in_oklab,var(--primary)_5%,var(--background)),var(--background))]">
@@ -64,22 +77,22 @@ function Index() {
           width={1600}
           height={1200}
         />
-        <div className="relative mx-auto grid min-h-[calc(100vh-4.5rem)] max-w-7xl items-center gap-14 px-4 py-14 md:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-20">
+        <div className="relative mx-auto grid min-h-[56vh] max-w-7xl items-center gap-8 px-4 py-8 md:min-h-[60vh] md:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-10">
           <Reveal className="text-primary-foreground">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/8 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
               Premium Medical + Modern Luxury
             </span>
-            <h1 className="mt-6 font-display text-5xl font-bold leading-[0.95] md:text-7xl">
+            <h1 className="mt-5 font-display text-4xl font-bold leading-[0.95] md:text-6xl">
               Welness starts here.
             </h1>
-            <p className="mt-6 max-w-2xl text-lg md:text-2xl font-medium text-primary-foreground/90">
+            <p className="mt-4 max-w-2xl text-lg font-medium text-primary-foreground/90 md:text-xl">
               Quality Medicines. Reliable Laboratory Services. Professional Healthcare Solutions.
             </p>
-            <p className="mt-6 max-w-2xl text-base md:text-lg leading-relaxed text-primary-foreground/78">
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/78 md:text-lg">
               Providing genuine medicines, accurate laboratory testing, skincare products, vitamins,
               perfumes, and professional pharmaceutical care for individuals, families, and businesses.
             </p>
-            <div className="mt-9 flex flex-wrap gap-3">
+            <div className="mt-7 flex flex-wrap gap-3">
               <Link to="/laboratory" className="rounded-full bg-primary-foreground px-7 py-3.5 text-sm font-display font-semibold text-foreground shadow-elegant transition-transform hover:-translate-y-0.5">
                 Book Lab Test
               </Link>
@@ -104,12 +117,39 @@ function Index() {
           <Reveal delay={120} className="relative lg:justify-self-end">
             <div className="relative overflow-hidden rounded-[calc(var(--radius-3xl)+8px)] border border-primary-foreground/15 bg-primary-foreground/8 p-3 backdrop-blur-sm shadow-elegant">
               <img
-                src={heroImage}
-                alt="Professional pharmacist in a modern pharmacy"
-                className="aspect-[4/5] w-full rounded-[calc(var(--radius-3xl))] object-cover"
+                src={heroSlides[activeSlide]}
+                alt="Nuno Pharmacy highlights"
+                className="aspect-[4/5] w-full rounded-[calc(var(--radius-3xl))] object-cover transition-all duration-500"
                 width={1280}
                 height={1600}
               />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent p-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveSlide((current) => (current - 1 + heroSlides.length) % heroSlides.length)}
+                  className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur"
+                >
+                  Prev
+                </button>
+                <div className="flex items-center gap-2">
+                  {heroSlides.map((_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setActiveSlide(index)}
+                      className={`h-2.5 rounded-full transition-all ${index === activeSlide ? "w-6 bg-white" : "w-2.5 bg-white/60"}`}
+                      aria-label={`Show slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveSlide((current) => (current + 1) % heroSlides.length)}
+                  className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur"
+                >
+                  Next
+                </button>
+              </div>
             </div>
             <div className="absolute -left-4 bottom-6 rounded-[var(--radius-xl)] border border-border bg-card px-4 py-4 shadow-soft sm:-left-10">
               <div className="text-sm font-semibold text-muted-foreground">Trusted service</div>
@@ -161,6 +201,16 @@ function Index() {
               <p className="max-w-xl text-muted-foreground">
                 Clean processes, professional guidance and carefully curated products for daily health and specialist care.
               </p>
+            </div>
+          </Reveal>
+
+          <Reveal>
+            <div className="mt-6 flex flex-wrap items-center gap-4 rounded-[var(--radius-2xl)] border border-primary/20 bg-primary/5 p-4 shadow-soft">
+              <img src={pathwayLabLogo} alt="Pathway Lab logo" className="h-14 w-14 rounded-full border border-border bg-white p-1" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Collaborating with Pathway Lab</p>
+                <p className="text-sm text-muted-foreground">We work alongside Pathway Lab to offer trusted diagnostic support and seamless care coordination.</p>
+              </div>
             </div>
           </Reveal>
 

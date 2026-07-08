@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listProductCategories, listProducts, removeCategory, removeProduct, uploadProductImage, upsertCategory, upsertProduct } from "../lib/shop.functions";
 import { formatServiceType, readServices, writeServices, type ServiceItem, type ServiceType } from "../lib/services";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 
 
 type ProductItem = CatalogProduct;
@@ -102,6 +103,8 @@ function DashboardPage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
@@ -210,6 +213,7 @@ function DashboardPage() {
   function resetProductForm() {
     setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null, image_urls: [] });
     setEditingProductId(null);
+    setProductDialogOpen(false);
   }
 
   function openProductDialog(product?: ProductItem) {
@@ -230,12 +234,14 @@ function DashboardPage() {
       setEditingProductId(null);
       setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_url: null, image_urls: [] });
     }
+    setProductDialogOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function resetCategoryForm() {
     setCategoryForm({ name: "", description: "" });
     setEditingCategoryId(null);
+    setCategoryDialogOpen(false);
   }
 
   function openCategoryDialog(category?: CategoryItem) {
@@ -246,6 +252,8 @@ function DashboardPage() {
       setEditingCategoryId(null);
       setCategoryForm({ name: "", description: "" });
     }
+    setCategoryDialogOpen(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
 
@@ -309,13 +317,14 @@ function DashboardPage() {
     }
   }
 
-  async function handleProductImageChange(files: FileList | null) {
-    if (!files?.length) return;
+  async function handleProductImageChange(files: FileList | File | null | undefined) {
+    const fileList = files instanceof File ? [files] : files;
+    if (!fileList?.length) return;
     const newImages: string[] = [];
     setUploadingImage(true);
 
     try {
-      for (const file of Array.from(files)) {
+      for (const file of Array.from(fileList)) {
         if (file.size > 2 * 1024 * 1024) {
           toast.error("One or more images are too large. Please choose files under 2MB.");
           continue;
@@ -491,74 +500,9 @@ function DashboardPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveProduct} className="mt-6 grid gap-4 md:grid-cols-2">
-              <label className="text-sm font-medium md:col-span-2">
-                Product name
-                <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <label className="text-sm font-medium">
-                Category
-                <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
-                  <option value="">Select category</option>
-                  {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
-                  <option value="Uncategorized">Uncategorized</option>
-                </select>
-              </label>
-              <label className="text-sm font-medium">
-                Price (KES)
-                <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
-              </label>
-              <label className="text-sm font-medium">
-                Unit
-                <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <label className="text-sm font-medium md:col-span-2">
-                Description
-                <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-              </label>
-              <div className="text-sm font-medium md:col-span-2">
-                <label className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-primary" /> Product image
-                </label>
-                <div className="mt-2 flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-background p-4 sm:flex-row sm:items-center">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={uploadingImage}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      handleProductImageChange(file);
-                      event.target.value = "";
-                    }}
-                    className="block w-full text-sm"
-                  />
-                  {uploadingImage ? (
-                    <span className="inline-flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading…</span>
-                  ) : null}
-                  {productForm.image_url ? (
-                    <div className="flex items-center gap-3">
-                      <img src={productForm.image_url} alt="Preview" className="h-16 w-16 rounded-xl object-cover" />
-                      <button type="button" onClick={() => setProductForm((prev) => ({ ...prev, image_url: null }))} className="text-xs font-semibold text-destructive hover:underline">Remove</button>
-                    </div>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">Optional. PNG or JPG up to 2MB.</p>
-              </div>
-              <label className="flex items-center gap-3 text-sm font-medium">
-                <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
-                Requires prescription
-              </label>
-              <label className="flex items-center gap-3 text-sm font-medium">
-                <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
-                In stock
-              </label>
-              <div className="md:col-span-2 flex gap-3">
-                <button type="submit" disabled={savingProduct} className="inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
-                  {savingProduct ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingProductId ? "Save product" : "Create product"}
-                </button>
-                {editingProductId ? <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
-              </div>
-            </form>
+            <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+              Create or edit products from the popup form opened by the button above.
+            </div>
 
             <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
               <Search className="h-4 w-4 text-primary" />
@@ -702,9 +646,9 @@ function DashboardPage() {
                 </div>
                 <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
                   <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
-                  <button type="submit" form="product-form" disabled={productSaving} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
-                    {productSaving ? <svg className="inline-block h-4 w-4 animate-spin align-middle" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : null}
-                    <span className="align-middle">{editingProductId ? (productSaving ? "Saving..." : "Save product") : (productSaving ? "Creating..." : "Create product")}</span>
+                  <button type="submit" form="product-form" disabled={savingProduct} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                    {savingProduct ? <svg className="inline-block h-4 w-4 animate-spin align-middle" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : null}
+                    <span className="align-middle">{editingProductId ? (savingProduct ? "Saving..." : "Save product") : (savingProduct ? "Creating..." : "Create product")}</span>
                   </button>
                 </DialogFooter>
               </div>
@@ -728,22 +672,9 @@ function DashboardPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSaveCategory} className="mt-6 space-y-4">
-                <label className="block text-sm font-medium">
-                  Category name
-                  <input value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                </label>
-                <label className="block text-sm font-medium">
-                  Description
-                  <textarea value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                </label>
-                <div className="flex gap-3">
-                  <button type="submit" disabled={savingCategory} className="inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed">
-                    {savingCategory ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingCategoryId ? "Save category" : "Create category"}
-                  </button>
-                  {editingCategoryId ? <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button> : null}
-                </div>
-              </form>
+              <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+                Create or edit categories from the popup form opened by the button above.
+              </div>
 
               <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
                 <Search className="h-4 w-4 text-primary" />
@@ -815,6 +746,31 @@ function DashboardPage() {
             </div>
           </section>
         </div>
+
+        <Dialog open={categoryDialogOpen} onOpenChange={(open) => (open ? setCategoryDialogOpen(true) : resetCategoryForm())}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editingCategoryId ? "Edit category" : "New category"}</DialogTitle>
+              <DialogDescription>Save a category and keep your catalog organized.</DialogDescription>
+            </DialogHeader>
+            <form id="category-form" onSubmit={handleSaveCategory} className="mt-4 space-y-4">
+              <label className="block text-sm font-medium">
+                Category name
+                <input value={categoryForm.name} onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+              </label>
+              <label className="block text-sm font-medium">
+                Description
+                <textarea value={categoryForm.description} onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+              </label>
+            </form>
+            <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+              <button type="submit" form="category-form" disabled={savingCategory} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                {savingCategory ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingCategoryId ? "Save category" : "Create category"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
