@@ -325,10 +325,12 @@ function DashboardPage() {
         reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
         reader.readAsDataURL(file);
       });
-      setProductForm((prev) => ({ ...prev, image_url: dataUrl }));
-      toast.success("Image ready. Save the product to keep it.");
+      const { url } = await uploadImageFn({ data: { data_url: dataUrl, filename: file.name } });
+      setProductForm((prev) => ({ ...prev, image_url: url }));
+      toast.success("Image uploaded. Save the product to keep it.");
     } catch (error) {
-      toast.error(`Could not read image: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(`Could not upload image: ${error instanceof Error ? error.message : "Unknown error"}`);
+
     } finally {
       setUploadingImage(false);
     }
