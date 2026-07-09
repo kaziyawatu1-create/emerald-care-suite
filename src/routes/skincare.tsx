@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import productPlaceholder from "../assets/product-placeholder.svg";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Check, ShoppingBag } from "lucide-react";
