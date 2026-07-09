@@ -12,7 +12,7 @@ export const listOffers = createServerFn({ method: "GET" }).handler(async () => 
   const supabase = publicClient();
   const { data, error } = await supabase
     .from("offers")
-    .select("id,title,description,badge,discount,expires_at,image,created_at")
+    .select("id,title,description,badge,discount,discount_percent,original_price,sale_price,expires_at,image,created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -29,7 +29,10 @@ const offerInputSchema = z.object({
   description: z.string().max(600).optional().default(""),
   badge: z.string().max(60).optional().default(""),
   discount: z.string().max(80).optional().default(""),
-  expires_at: z.string().optional().default(""),
+  discount_percent: z.number().int().min(0).max(100).nullable().optional(),
+  original_price: z.number().nonnegative().nullable().optional(),
+  sale_price: z.number().nonnegative().nullable().optional(),
+  expires_at: z.string().nullable().optional().default(""),
   image: z.string().optional().default(""),
 });
 
@@ -43,6 +46,9 @@ export const upsertOffer = createServerFn({ method: "POST" })
       description: data.description || null,
       badge: data.badge || null,
       discount: data.discount || null,
+      discount_percent: data.discount_percent ?? null,
+      original_price: data.original_price ?? null,
+      sale_price: data.sale_price ?? null,
       expires_at: data.expires_at || null,
       image: data.image || null,
     };
@@ -50,7 +56,7 @@ export const upsertOffer = createServerFn({ method: "POST" })
     const { data: saved, error } = await supabaseAdmin
       .from("offers")
       .upsert(payload, { onConflict: "id" })
-      .select("id,title,description,badge,discount,expires_at,image,created_at")
+      .select("id,title,description,badge,discount,discount_percent,original_price,sale_price,expires_at,image,created_at")
       .single();
 
     if (error) throw new Error(error.message);
@@ -65,3 +71,4 @@ export const removeOffer = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
