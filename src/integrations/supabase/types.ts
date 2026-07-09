@@ -80,6 +80,7 @@ export type Database = {
           expires_at: string | null
           id: string
           image: string | null
+          product_id: string | null
           title: string
         }
         Insert: {
@@ -91,6 +92,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           image?: string | null
+          product_id?: string | null
           title: string
         }
         Update: {
@@ -102,9 +104,18 @@ export type Database = {
           expires_at?: string | null
           id?: string
           image?: string | null
+          product_id?: string | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {

@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon } from "lucide-react";
+import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
+import { listOffers, removeOffer, upsertOffer } from "../lib/offers.functions";
 import { listProductCategories, listProducts, removeCategory, removeProduct, uploadProductImage, upsertCategory, upsertProduct } from "../lib/shop.functions";
 import { formatServiceType, readServices, writeServices, type ServiceItem, type ServiceType } from "../lib/services";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
@@ -12,6 +13,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 type ProductItem = CatalogProduct;
 
 type CategoryItem = CatalogCategory;
+
+type OfferItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  badge: string | null;
+  discount: string | null;
+  expires_at: string | null;
+  image: string | null;
+  created_at?: string;
+};
 
 type OrderItem = {
   id: string;
@@ -27,7 +39,17 @@ type ProductForm = Omit<ProductItem, "id">;
 
 type CategoryForm = Omit<CategoryItem, "id">;
 
+type OfferForm = {
+  title: string;
+  description: string;
+  badge: string;
+  discount: string;
+  expires_at: string;
+  image: string;
+};
+
 type ServiceForm = { name: string; description: string; type: ServiceType };
+type AdminView = "dashboard" | "products" | "categories" | "offers" | "orders";
 
 const defaultOrders: OrderItem[] = [
   {
@@ -106,37 +128,48 @@ function DashboardPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [activeView, setActiveView] = useState<AdminView>("dashboard");
   const saveProductFn = useServerFn(upsertProduct);
   const saveCategoryFn = useServerFn(upsertCategory);
   const deleteProductFn = useServerFn(removeProduct);
   const deleteCategoryFn = useServerFn(removeCategory);
+  const saveOfferFn = useServerFn(upsertOffer);
+  const deleteOfferFn = useServerFn(removeOffer);
   const uploadImageFn = useServerFn(uploadProductImage);
 
   const [products, setProducts] = useState<ProductItem[]>(() => readCatalogProducts());
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
+  const [offers, setOffers] = useState<OfferItem[]>([]);
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
   const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [] });
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
+  const [offerForm, setOfferForm] = useState<OfferForm>({ title: "", description: "", badge: "", discount: "", expires_at: "", image: "" });
+  const [offerProductSearch, setOfferProductSearch] = useState("");
+  const [offerSelectedProductId, setOfferSelectedProductId] = useState<string | null>(null);
   const [serviceForm, setServiceForm] = useState<ServiceForm>({ name: "", description: "", type: "inhouse" });
   const [productSearch, setProductSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
+  const [savingOffer, setSavingOffer] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     const loadCatalog = async () => {
       try {
-        const [productRows, categoryRows] = await Promise.all([listProducts(), listProductCategories()]);
+        const [productRows, categoryRows, offerRows] = await Promise.all([listProducts(), listProductCategories(), listOffers()]);
         setProducts(productRows as ProductItem[]);
         setCategories(categoryRows as CategoryItem[]);
+        setOffers(offerRows as OfferItem[]);
       } catch (error) {
         console.error("Failed to load catalog", error);
       }
@@ -203,6 +236,120 @@ function DashboardPage() {
       return haystack.includes(query);
     });
   }, [categories, categorySearch]);
+
+  function formatOfferExpiryValue(value: string | null | undefined) {
+    if (!value) return "";
+    const normalized = value.split(" ")[0];
+    return normalized.includes("T") ? normalized.split("T")[0] : normalized;
+  }
+
+  function findProductForOfferImage(image: string | null | undefined) {
+    if (!image) return null;
+    return products.find((product) => Array.isArray(product.image_urls) && product.image_urls.some((url) => url === image)) ?? null;
+  }
+
+  function resetOfferForm() {
+    setEditingOfferId(null);
+    setOfferForm({ title: "", description: "", badge: "", discount: "", expires_at: "", image: "" });
+    setOfferProductSearch("");
+    setOfferSelectedProductId(null);
+  }
+
+  function openOfferDialog(offer?: OfferItem) {
+    if (offer) {
+      const matchedProduct = findProductForOfferImage(offer.image);
+      setEditingOfferId(offer.id);
+      setOfferForm({
+        title: offer.title,
+        description: offer.description ?? "",
+        badge: offer.badge ?? "",
+        discount: offer.discount ?? "",
+        expires_at: formatOfferExpiryValue(offer.expires_at),
+        image: offer.image ?? matchedProduct?.image_urls?.[0] ?? "",
+      });
+      setOfferProductSearch(matchedProduct?.name ?? "");
+      setOfferSelectedProductId(matchedProduct?.id ?? null);
+    } else {
+      resetOfferForm();
+    }
+    setOfferDialogOpen(true);
+  }
+
+  function handleOfferProductSelection(nextValue: string) {
+    setOfferProductSearch(nextValue);
+
+    const normalized = nextValue.trim().toLowerCase();
+    const selectedProduct = products.find((product) => product.id === nextValue || product.name.toLowerCase() === normalized);
+
+    if (!selectedProduct) {
+      if (!normalized) {
+        setOfferSelectedProductId(null);
+        setOfferForm((prev) => ({ ...prev, image: "" }));
+      }
+      return;
+    }
+
+    setOfferSelectedProductId(selectedProduct.id);
+    setOfferProductSearch(selectedProduct.name);
+    const firstImage = Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "";
+    setOfferForm((prev) => ({ ...prev, image: firstImage }));
+  }
+
+  async function handleSaveOffer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!offerForm.title.trim()) {
+      toast.error("Please add an offer title.");
+      return;
+    }
+
+    setSavingOffer(true);
+    try {
+      const selectedProduct = offerSelectedProductId ? products.find((product) => product.id === offerSelectedProductId) ?? null : null;
+      const resolvedImage = selectedProduct
+        ? (Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "")
+        : offerForm.image.trim();
+
+      const savedOffer = (await saveOfferFn({
+        data: {
+          id: editingOfferId ?? undefined,
+          title: offerForm.title.trim(),
+          description: offerForm.description.trim(),
+          badge: offerForm.badge.trim(),
+          discount: offerForm.discount.trim(),
+          expires_at: offerForm.expires_at || "",
+          image: resolvedImage,
+        },
+      })) as OfferItem;
+
+      setOffers((current) => {
+        if (editingOfferId) {
+          return current.map((offer) => (offer.id === editingOfferId ? savedOffer : offer));
+        }
+        return [savedOffer, ...current];
+      });
+
+      toast.success(editingOfferId ? "Offer updated." : "Offer created.");
+      setOfferDialogOpen(false);
+      resetOfferForm();
+    } catch (error) {
+      console.error("Failed to save offer", error);
+      toast.error("Unable to save offer right now.");
+    } finally {
+      setSavingOffer(false);
+    }
+  }
+
+  async function handleDeleteOffer(id: string) {
+    if (!window.confirm("Delete this offer?")) return;
+    try {
+      await deleteOfferFn({ data: { id } });
+      setOffers((current) => current.filter((offer) => offer.id !== id));
+      toast.success("Offer deleted.");
+    } catch (error) {
+      console.error("Failed to delete offer", error);
+      toast.error("Unable to delete offer right now.");
+    }
+  }
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -499,274 +646,429 @@ function DashboardPage() {
 
 
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className="rounded-4xl border border-border bg-card p-5 shadow-soft">
-              <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-              <p className={`mt-2 font-display text-3xl font-semibold ${stat.accent}`}>{stat.value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <section className="rounded-4xl border border-border bg-card p-6 shadow-soft">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 text-primary">
-                  <Package className="h-5 w-5" />
-                  <h2 className="font-display text-2xl font-semibold">Products</h2>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">Add, edit, and remove products for the shop.</p>
-              </div>
-              <button onClick={() => openProductDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
-                <Plus className="h-4 w-4" /> New product
-              </button>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
-              Create or edit products from the popup form opened by the button above.
-            </div>
-
-            <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
-              <Search className="h-4 w-4 text-primary" />
-              <input
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="Search products"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              />
-            </label>
-
-            <div className="mt-6 space-y-3">
-              {filteredProducts.map((product) => (
-                <div key={product.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex items-start gap-3">
-                    {(product.image_urls && product.image_urls.length ? product.image_urls[0] : null) ? (
-                      <img
-                        src={(product.image_urls && product.image_urls.length ? product.image_urls[0] : null) as string}
-                        alt={product.name}
-                        className="h-16 w-16 shrink-0 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                        <ImageIcon className="h-5 w-5" />
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold">{product.name}</h3>
-                        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{product.category}</span>
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">{product.description}</p>
-                      <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(product.price_kes)} · {product.unit} · {product.in_stock ? "In stock" : "Out of stock"} · {product.requires_prescription ? "Rx" : "OTC"}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => openProductDialog(product)} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
-                      <PencilLine className="h-4 w-4" /> Edit
-                    </button>
-                    <button onClick={() => handleDeleteProduct(product.id)} disabled={deletingId === product.id} className="inline-flex items-center gap-2 rounded-full border border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60">
-                      {deletingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <Dialog open={productDialogOpen} onOpenChange={(open) => (open ? setProductDialogOpen(true) : resetProductForm())}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
-              <DialogHeader>
-                <DialogTitle>{editingProductId ? "Edit product" : "New product"}</DialogTitle>
-                <DialogDescription>Manage a shop product and save it to your inventory.</DialogDescription>
-              </DialogHeader>
-              <div className="mt-4 flex h-[calc(90vh-170px)] flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto pr-2">
-                  <form id="product-form" onSubmit={handleSaveProduct} className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
-                    <label className="text-sm font-medium md:col-span-2">
-                      Product name
-                      <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                    </label>
-                    <label className="text-sm font-medium">
-                      Category
-                      <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
-                        <option value="">Select category</option>
-                        {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
-                        <option value="Uncategorized">Uncategorized</option>
-                      </select>
-                    </label>
-                    <label className="text-sm font-medium">
-                      Price (KES)
-                      <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
-                    </label>
-                    <label className="text-sm font-medium">
-                      Unit
-                      <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                    </label>
-                    <div className="space-y-4">
-                      <label className="text-sm font-medium">
-                        Description
-                        <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-32 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-                      </label>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <label className="flex items-center gap-3 text-sm font-medium">
-                          <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
-                          Requires prescription
-                        </label>
-                        <label className="flex items-center gap-3 text-sm font-medium">
-                          <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
-                          In stock
-                        </label>
-                      </div>
-                    </div>
-                    <div className="rounded-3xl border border-border bg-background p-4 shadow-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold">Product images</p>
-                          <p className="text-xs text-muted-foreground">Upload up to 6 images, then save.</p>
-                        </div>
-                        {uploadingImage ? <span className="text-xs text-muted-foreground">Preparing…</span> : null}
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        disabled={uploadingImage}
-                        onChange={(event) => {
-                          handleProductImageChange(event.target.files);
-                          event.target.value = "";
-                        }}
-                        className="mt-3 block w-full rounded-2xl border border-border bg-background px-4 py-3"
-                      />
-                      <div className="mt-4 grid gap-3 sm:grid-cols-3 max-h-60 overflow-y-auto">
-                        {productForm.image_urls && productForm.image_urls.length > 0 ? (
-                          productForm.image_urls.map((src, index) => (
-                            <div key={src + index} className="group relative overflow-hidden rounded-2xl border border-border">
-                              <img src={src} alt={`Preview ${index + 1}`} className="h-24 w-full object-cover" />
-                              <button
-                                type="button"
-                                onClick={() => setProductForm((prev) => ({
-                                  ...prev,
-                                  image_urls: prev.image_urls?.filter((_, idx) => idx !== index) ?? [],
-                                }))}
-                                className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition group-hover:opacity-100"
-                                aria-label="Remove image"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                            No images selected yet.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </form>
-                </div>
-                <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                  <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
-                  <button type="submit" form="product-form" disabled={savingProduct} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
-                    {savingProduct ? <svg className="inline-block h-4 w-4 animate-spin align-middle" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : null}
-                    <span className="align-middle">{editingProductId ? (savingProduct ? "Saving..." : "Save product") : (savingProduct ? "Creating..." : "Create product")}</span>
-                  </button>
-                </DialogFooter>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <section className="space-y-6">
-
-
+        <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="lg:sticky lg:top-6 lg:self-start">
             <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 text-primary">
-                    <Tags className="h-5 w-5" />
-                    <h2 className="font-display text-2xl font-semibold">Categories</h2>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">Group products by category.</p>
-                </div>
-                <button onClick={() => openCategoryDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
-                  <Plus className="h-4 w-4" /> New
+              <h3 className="font-semibold">Navigate</h3>
+              <p className="mt-2 text-sm text-muted-foreground">Jump to a specific admin area.</p>
+              <div className="mt-4 flex flex-col gap-3">
+                <button onClick={() => setActiveView("dashboard")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "dashboard" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <ShieldCheck className="h-4 w-4" /> Overview
+                </button>
+                <button onClick={() => setActiveView("products")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "products" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <Package className="h-4 w-4" /> Products
+                </button>
+                <button onClick={() => setActiveView("categories")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "categories" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <Tags className="h-4 w-4" /> Categories
+                </button>
+                <button onClick={() => setActiveView("offers")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "offers" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <Gift className="h-4 w-4" /> Offers
+                </button>
+                <button onClick={() => setActiveView("orders")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "orders" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <ShoppingCart className="h-4 w-4" /> Orders
                 </button>
               </div>
-
-              <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
-                Create or edit categories from the popup form opened by the button above.
-              </div>
-
-              <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
-                <Search className="h-4 w-4 text-primary" />
-                <input
-                  value={categorySearch}
-                  onChange={(e) => setCategorySearch(e.target.value)}
-                  placeholder="Search categories"
-                  className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                />
-              </label>
-
-              <div className="mt-6 space-y-3">
-                {filteredCategories.map((category) => (
-                  <div key={category.id} className="rounded-2xl border border-border bg-background px-4 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold">{category.name}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">{category.description}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => openCategoryDialog(category)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
-                          <PencilLine className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => handleDeleteCategory(category.id)} disabled={deletingId === category.id} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 disabled:opacity-60">
-                          {deletingId === category.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
+          </aside>
 
+          <div className="space-y-6">
+            {activeView === "dashboard" ? (
+              <>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {stats.map((stat) => (
+                    <div key={stat.label} className="rounded-4xl border border-border bg-card p-5 shadow-soft">
+                      <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                      <p className={`mt-2 font-display text-3xl font-semibold ${stat.accent}`}>{stat.value}</p>
+                    </div>
+                  ))}
+                </div>
 
+                <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                  <h3 className="font-semibold">Dashboard overview</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">Choose an option from the sidebar to manage products, categories, offers, or orders.</p>
+                </div>
+              </>
+            ) : null}
 
-
-            <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
-              <div className="flex items-center gap-2 text-primary">
-                <ShoppingCart className="h-5 w-5" />
-                <h2 className="font-display text-2xl font-semibold">Placed orders</h2>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">Track the latest orders placed through the storefront.</p>
-              <div className="mt-6 space-y-3">
-                {orders.length === 0 ? (
-                  <div className="flex items-center gap-2 rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
-                    <AlertCircle className="h-4 w-4" /> No orders yet.
+            {activeView === "products" ? (
+              <>
+                <section id="products" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-primary">
+                        <Package className="h-5 w-5" />
+                        <h2 className="font-display text-2xl font-semibold">Products</h2>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">Add, edit, and remove products for the shop.</p>
+                    </div>
+                    <button onClick={() => openProductDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+                      <Plus className="h-4 w-4" /> New product
+                    </button>
                   </div>
-                ) : (
-                  orders.map((order) => (
-                    <div key={order.id} className="rounded-2xl border border-border bg-background px-4 py-4">
-                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold">{order.id}</h3>
-                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{order.status}</span>
+
+                  <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+                    Create or edit products from the popup form opened by the button above.
+                  </div>
+
+                  <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+                    <Search className="h-4 w-4 text-primary" />
+                    <input
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder="Search products"
+                      className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                  </label>
+
+                  <div className="mt-6 space-y-3">
+                    {filteredProducts.map((product) => (
+                      <div key={product.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background px-4 py-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-start gap-3">
+                          {(product.image_urls && product.image_urls.length ? product.image_urls[0] : null) ? (
+                            <img
+                              src={(product.image_urls && product.image_urls.length ? product.image_urls[0] : null) as string}
+                              alt={product.name}
+                              className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                              <ImageIcon className="h-5 w-5" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold">{product.name}</h3>
+                              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{product.category}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">{product.description}</p>
+                            <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(product.price_kes)} · {product.unit} · {product.in_stock ? "In stock" : "Out of stock"} · {product.requires_prescription ? "Rx" : "OTC"}</p>
                           </div>
-                          <p className="mt-1 text-sm text-muted-foreground">{order.customerName} · {order.customerEmail}</p>
                         </div>
-                        <div className="text-sm font-semibold">{formatCurrency(order.total)}</div>
+                        <div className="flex gap-2">
+                          <button onClick={() => openProductDialog(product)} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
+                            <PencilLine className="h-4 w-4" /> Edit
+                          </button>
+                          <button onClick={() => handleDeleteProduct(product.id)} disabled={deletingId === product.id} className="inline-flex items-center gap-2 rounded-full border border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                            {deletingId === product.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
+                          </button>
+                        </div>
                       </div>
-                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">Placed {order.createdAt}</p>
-                      <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-                        {order.items.map((item) => <li key={`${order.id}-${item.name}`} className="flex justify-between gap-3"><span>{item.quantity} × {item.name}</span><span>{formatCurrency(item.price * item.quantity)}</span></li>)}
-                      </ul>
+                    ))}
+                  </div>
+                </section>
+
+                <Dialog open={productDialogOpen} onOpenChange={(open) => (open ? setProductDialogOpen(true) : resetProductForm())}>
+                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>{editingProductId ? "Edit product" : "New product"}</DialogTitle>
+                      <DialogDescription>Manage a shop product and save it to your inventory.</DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4 flex h-[calc(90vh-170px)] flex-col overflow-hidden">
+                      <div className="flex-1 overflow-y-auto pr-2">
+                        <form id="product-form" onSubmit={handleSaveProduct} className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
+                          <label className="text-sm font-medium md:col-span-2">
+                            Product name
+                            <input value={productForm.name} onChange={(e) => setProductForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                          </label>
+                          <label className="text-sm font-medium">
+                            Category
+                            <select value={productForm.category} onChange={(e) => setProductForm((prev) => ({ ...prev, category: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required>
+                              <option value="">Select category</option>
+                              {productCategories.map((name) => <option key={name} value={name}>{name}</option>)}
+                              <option value="Uncategorized">Uncategorized</option>
+                            </select>
+                          </label>
+                          <label className="text-sm font-medium">
+                            Price (KES)
+                            <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
+                          </label>
+                          <label className="text-sm font-medium">
+                            Unit
+                            <input value={productForm.unit} onChange={(e) => setProductForm((prev) => ({ ...prev, unit: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                          </label>
+                          <div className="space-y-4">
+                            <label className="text-sm font-medium">
+                              Description
+                              <textarea value={productForm.description} onChange={(e) => setProductForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-32 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                            </label>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <label className="flex items-center gap-3 text-sm font-medium">
+                                <input type="checkbox" checked={productForm.requires_prescription} onChange={(e) => setProductForm((prev) => ({ ...prev, requires_prescription: e.target.checked }))} />
+                                Requires prescription
+                              </label>
+                              <label className="flex items-center gap-3 text-sm font-medium">
+                                <input type="checkbox" checked={productForm.in_stock} onChange={(e) => setProductForm((prev) => ({ ...prev, in_stock: e.target.checked }))} />
+                                In stock
+                              </label>
+                            </div>
+                            <label className="text-sm font-medium">
+                              Product images
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                disabled={uploadingImage}
+                                onChange={(event) => {
+                                  handleProductImageChange(event.target.files);
+                                  event.target.value = "";
+                                }}
+                                className="mt-3 block w-full rounded-2xl border border-border bg-background px-4 py-3"
+                              />
+                            </label>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-3 max-h-60 overflow-y-auto">
+                              {productForm.image_urls && productForm.image_urls.length > 0 ? (
+                                productForm.image_urls.map((src, index) => (
+                                  <div key={src + index} className="group relative overflow-hidden rounded-2xl border border-border">
+                                    <img src={src} alt={`Preview ${index + 1}`} className="h-24 w-full object-cover" />
+                                    <button
+                                      type="button"
+                                      onClick={() => setProductForm((prev) => ({
+                                        ...prev,
+                                        image_urls: prev.image_urls?.filter((_, idx) => idx !== index) ?? [],
+                                      }))}
+                                      className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition group-hover:opacity-100"
+                                      aria-label="Remove image"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                                  No images selected yet.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </form>
+                      </div>
+                      <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                        <button type="button" onClick={resetProductForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+                        <button type="submit" form="product-form" disabled={savingProduct} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                          {savingProduct ? <svg className="inline-block h-4 w-4 animate-spin align-middle" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg> : null}
+                          <span className="align-middle">{editingProductId ? (savingProduct ? "Saving..." : "Save product") : (savingProduct ? "Creating..." : "Create product")}</span>
+                        </button>
+                      </DialogFooter>
                     </div>
-                  ))
-                )}
+                  </DialogContent>
+                </Dialog>
+              </>
+            ) : null}
+
+            {activeView === "categories" ? (
+              <div id="categories" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary">
+                      <Tags className="h-5 w-5" />
+                      <h2 className="font-display text-2xl font-semibold">Categories</h2>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">Group products by category.</p>
+                  </div>
+                  <button onClick={() => openCategoryDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+                    <Plus className="h-4 w-4" /> New
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+                  Create or edit categories from the popup form opened by the button above.
+                </div>
+
+                <label className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+                  <Search className="h-4 w-4 text-primary" />
+                  <input
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    placeholder="Search categories"
+                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  />
+                </label>
+
+                <div className="mt-6 space-y-3">
+                  {filteredCategories.map((category) => (
+                    <div key={category.id} className="rounded-2xl border border-border bg-background px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-semibold">{category.name}</h3>
+                          <p className="mt-1 text-sm text-muted-foreground">{category.description}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => openCategoryDialog(category)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
+                            <PencilLine className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleDeleteCategory(category.id)} disabled={deletingId === category.id} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                            {deletingId === category.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          </section>
+            ) : null}
+
+            {activeView === "offers" ? (
+              <div id="offers" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary">
+                      <Gift className="h-5 w-5" />
+                      <h2 className="font-display text-2xl font-semibold">Offers</h2>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">Create promotions that appear on the storefront offers page.</p>
+                  </div>
+                  <button onClick={() => openOfferDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+                    <Plus className="h-4 w-4" /> New offer
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+                  Use the popup form to create offers and keep the offers view updated.
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  {offers.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
+                      No offers created yet.
+                    </div>
+                  ) : (
+                    offers.map((offer) => (
+                      <div key={offer.id} className="rounded-2xl border border-border bg-background px-4 py-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-semibold">{offer.title}</h3>
+                              {offer.badge ? <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{offer.badge}</span> : null}
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">{offer.description ?? "No description provided."}</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                              {offer.discount ? <span>{offer.discount}</span> : null}
+                              {offer.expires_at ? <span>Ends {offer.expires_at}</span> : null}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => openOfferDialog(offer)} className="rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
+                              <PencilLine className="h-4 w-4" /> Edit
+                            </button>
+                            <button onClick={() => handleDeleteOffer(offer.id)} disabled={deletingId === offer.id} className="rounded-full border border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                              {deletingId === offer.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {activeView === "orders" ? (
+              <div id="orders" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center gap-2 text-primary">
+                  <ShoppingCart className="h-5 w-5" />
+                  <h2 className="font-display text-2xl font-semibold">Placed orders</h2>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">Track the latest orders placed through the storefront.</p>
+                <div className="mt-6 space-y-3">
+                  {orders.length === 0 ? (
+                    <div className="flex items-center gap-2 rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
+                      <AlertCircle className="h-4 w-4" /> No orders yet.
+                    </div>
+                  ) : (
+                    orders.map((order) => (
+                      <div key={order.id} className="rounded-2xl border border-border bg-background px-4 py-4">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">{order.id}</h3>
+                              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{order.status}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">{order.customerName} · {order.customerEmail}</p>
+                          </div>
+                          <div className="text-sm font-semibold">{formatCurrency(order.total)}</div>
+                        </div>
+                        <p className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">Placed {order.createdAt}</p>
+                        <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
+                          {order.items.map((item) => <li key={`${order.id}-${item.name}`} className="flex justify-between gap-3"><span>{item.quantity} × {item.name}</span><span>{formatCurrency(item.price * item.quantity)}</span></li>)}
+                        </ul>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
+      </div>
+
+      <>
+        <Dialog open={offerDialogOpen} onOpenChange={(open) => (open ? setOfferDialogOpen(true) : (setOfferDialogOpen(false), resetOfferForm()))}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editingOfferId ? "Edit offer" : "New offer"}</DialogTitle>
+              <DialogDescription>Create a promotion and make it appear on the offers page.</DialogDescription>
+            </DialogHeader>
+            <form id="offer-form" onSubmit={handleSaveOffer} className="mt-4 space-y-4">
+              <label className="block text-sm font-medium">
+                Offer title
+                <input value={offerForm.title} onChange={(e) => setOfferForm((prev) => ({ ...prev, title: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+              </label>
+              <label className="block text-sm font-medium">
+                Description
+                <textarea value={offerForm.description} onChange={(e) => setOfferForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium">
+                  Badge
+                  <select value={offerForm.badge} onChange={(e) => setOfferForm((prev) => ({ ...prev, badge: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3">
+                    <option value="">Select badge</option>
+                    <option value="New Arrival">New Arrival</option>
+                    <option value="Discounted">Discounted</option>
+                  </select>
+                </label>
+                <label className="block text-sm font-medium">
+                  Discount label
+                  <input value={offerForm.discount} onChange={(e) => setOfferForm((prev) => ({ ...prev, discount: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="15% off" />
+                </label>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium">
+                  Expires at
+                  <input type="date" value={offerForm.expires_at} onChange={(e) => setOfferForm((prev) => ({ ...prev, expires_at: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                </label>
+                <label className="block text-sm font-medium">
+                  Product on offer
+                  <input
+                    list="offer-product-options"
+                    value={offerProductSearch}
+                    onChange={(event) => handleOfferProductSelection(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    placeholder="Search products"
+                  />
+                  <datalist id="offer-product-options">
+                    {products.map((product) => (
+                      <option key={product.id} value={product.name}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </datalist>
+                  <span className="mt-2 block text-xs text-muted-foreground">The offer card image will use the selected product image.</span>
+                </label>
+              </div>
+              {offerForm.image ? (
+                <div className="overflow-hidden rounded-2xl border border-border">
+                  <img src={offerForm.image} alt="Offer preview" className="h-40 w-full object-cover" />
+                </div>
+              ) : null}
+            </form>
+            <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => (setOfferDialogOpen(false), resetOfferForm())} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+              <button type="submit" form="offer-form" disabled={savingOffer} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                {savingOffer ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingOfferId ? "Save offer" : "Create offer"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={categoryDialogOpen} onOpenChange={(open) => (open ? setCategoryDialogOpen(true) : resetCategoryForm())}>
           <DialogContent className="max-w-2xl">
@@ -792,7 +1094,7 @@ function DashboardPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </>
     </div>
   );
 }

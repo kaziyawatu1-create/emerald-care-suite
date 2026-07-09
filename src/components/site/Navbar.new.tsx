@@ -45,7 +45,7 @@ export function Navbar() {
         </div>
       </div>
 
-      <div className="w-full bg-gradient-to-r from-background to-gold/5 backdrop-blur-md transition-colors">
+      <div className="w-full bg-background/75 backdrop-blur-md transition-colors">
         <div className="mx-auto max-w-7xl px-4 py-3 md:px-8">
           <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center rounded-2xl p-2">
             <Link to="/" className="flex items-center gap-2.5 group lg:min-w-60">
@@ -64,7 +64,7 @@ export function Navbar() {
                 <button aria-label="Toggle menu" onClick={() => setOpen((v) => !v)} className="lg:hidden grid h-10 w-10 place-items-center rounded-full border border-border bg-background">{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
               </div>
 
-              <nav className="hidden lg:flex items-center justify-end gap-1 flex-wrap rounded-full bg-blue-900/70 backdrop-blur px-2 py-1 border border-blue-800/40 text-white">
+              <nav className="hidden lg:flex items-center justify-end gap-1 flex-wrap">
                 {links.map((l) => {
                   const iconMap: Record<string, React.ReactElement> = {
                     "/": <Sparkles className="h-4 w-4" />,
@@ -75,7 +75,7 @@ export function Navbar() {
                   };
 
                   return (
-                    <Link key={l.to} to={l.to} activeOptions={{ exact: l.to === "/" }} activeProps={{ className: "text-white bg-blue-800/50" }} inactiveProps={{ className: "text-white/80 hover:text-white hover:bg-blue-800/30" }} className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors">{iconMap[l.to]}{l.label}</Link>
+                    <Link key={l.to} to={l.to} activeOptions={{ exact: l.to === "/" }} activeProps={{ className: "text-primary bg-primary/8" }} inactiveProps={{ className: "text-foreground/75 hover:text-primary hover:bg-primary/5" }} className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors">{iconMap[l.to]}{l.label}</Link>
                   );
                 })}
                 <Link to="/laboratory" className="rounded-full btn-gradient px-4 py-2.5 text-sm font-semibold font-display">Book Appointment</Link>
