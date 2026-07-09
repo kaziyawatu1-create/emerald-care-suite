@@ -411,37 +411,70 @@ function OffersPage() {
 
       <section className="section-pad">
         <div className="mx-auto max-w-7xl px-4 md:px-8 grid gap-6 lg:grid-cols-3">
-          {offers.map((offer, index) => (
+          {offers.map((offer, index) => {
+            const pct = offer.discount_percent ?? (offer.original_price && offer.sale_price && offer.original_price > offer.sale_price
+              ? Math.round(((offer.original_price - offer.sale_price) / offer.original_price) * 100)
+              : null);
+            return (
             <Reveal key={offer.id} delay={index * 60}>
-              <article className="rounded-2xl border border-border bg-card p-6 shadow-soft card-lift">
+              <article className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-soft card-lift">
+                {/* Discount % badge - top right corner */}
+                {pct && pct > 0 ? (
+                  <div className="absolute right-3 top-3 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg ring-4 ring-white">
+                    <div className="text-center leading-none">
+                      <div className="text-lg font-bold">-{pct}%</div>
+                    </div>
+                  </div>
+                ) : null}
+
                 {offer.image ? (
-                  <img src={offer.image} alt={offer.title} className="mb-4 h-48 w-full rounded-3xl object-cover" />
+                  <img src={offer.image} alt={offer.title} className="h-48 w-full object-cover" />
                 ) : null}
-                <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                  {offer.badge ?? "Offer"}
-                </span>
-                <h2 className="mt-4 font-display text-2xl font-semibold">{offer.title}</h2>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{offer.description ?? "More details available soon."}</p>
-                {offer.discount ? <p className="mt-3 text-sm font-medium text-foreground">{offer.discount}</p> : null}
-                {offer.expires_at ? (
-                  <p className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                    {(() => {
-                      const target = new Date(offer.expires_at);
-                      if (Number.isNaN(target.getTime())) return `Ends ${offer.expires_at}`;
-                      const diffMs = target.getTime() - Date.now();
-                      if (diffMs <= 0) return "Expired";
-                      const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
-                      const days = Math.floor(totalHours / 24);
-                      const hours = totalHours % 24;
-                      if (days > 0) return `${days} day${days > 1 ? "s" : ""} left`;
-                      if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} left`;
-                      return "Less than 1 hour left";
-                    })()}
-                  </p>
-                ) : null}
+
+                <div className="p-6">
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${badgeClasses(offer.badge)}`}>
+                    {offer.badge ?? "Offer"}
+                  </span>
+                  <h2 className="mt-4 font-display text-2xl font-semibold">{offer.title}</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{offer.description ?? "More details available soon."}</p>
+
+                  {(offer.original_price || offer.sale_price) ? (
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      {offer.original_price ? (
+                        <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-medium text-red-700 line-through decoration-red-600 decoration-2">
+                          {formatPrice(offer.original_price)}
+                        </span>
+                      ) : null}
+                      {offer.sale_price ? (
+                        <span className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-base font-bold text-white shadow-sm">
+                          {formatPrice(offer.sale_price)}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {offer.discount ? <p className="mt-3 text-sm font-medium text-foreground">{offer.discount}</p> : null}
+                  {offer.expires_at ? (
+                    <p className="mt-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                      {(() => {
+                        const target = new Date(offer.expires_at);
+                        if (Number.isNaN(target.getTime())) return `Ends ${offer.expires_at}`;
+                        const diffMs = target.getTime() - Date.now();
+                        if (diffMs <= 0) return "Expired";
+                        const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const days = Math.floor(totalHours / 24);
+                        const hours = totalHours % 24;
+                        if (days > 0) return `${days} day${days > 1 ? "s" : ""} left`;
+                        if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} left`;
+                        return "Less than 1 hour left";
+                      })()}
+                    </p>
+                  ) : null}
+                </div>
               </article>
             </Reveal>
-          ))}
+            );
+          })}
         </div>
       </section>
     </>
