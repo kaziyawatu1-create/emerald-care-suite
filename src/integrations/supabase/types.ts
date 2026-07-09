@@ -77,10 +77,13 @@ export type Database = {
           created_by: string | null
           description: string | null
           discount: string | null
+          discount_percent: number | null
           expires_at: string | null
           id: string
           image: string | null
+          original_price: number | null
           product_id: string | null
+          sale_price: number | null
           title: string
         }
         Insert: {
@@ -89,10 +92,13 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           discount?: string | null
+          discount_percent?: number | null
           expires_at?: string | null
           id?: string
           image?: string | null
+          original_price?: number | null
           product_id?: string | null
+          sale_price?: number | null
           title: string
         }
         Update: {
@@ -101,10 +107,13 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           discount?: string | null
+          discount_percent?: number | null
           expires_at?: string | null
           id?: string
           image?: string | null
+          original_price?: number | null
           product_id?: string | null
+          sale_price?: number | null
           title?: string
         }
         Relationships: [
@@ -243,7 +252,6 @@ export type Database = {
           created_at: string
           description: string
           id: string
-          image_url: string | null
           image_urls: string[] | null
           in_stock: boolean
           name: string
@@ -256,7 +264,6 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
-          image_url?: string | null
           image_urls?: string[] | null
           in_stock?: boolean
           name: string
@@ -269,7 +276,6 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
-          image_url?: string | null
           image_urls?: string[] | null
           in_stock?: boolean
           name?: string
