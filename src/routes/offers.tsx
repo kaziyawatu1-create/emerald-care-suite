@@ -309,8 +309,9 @@ function OffersPage() {
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors md:text-sm"
                 >
                   <option value="">Select badge</option>
-                  <option value="New Arrival">New Arrival</option>
-                  <option value="Discounted">Discounted</option>
+                  {BADGE_OPTIONS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
                 </select>
               </div>
               <div className="grid gap-2">
@@ -319,10 +320,49 @@ function OffersPage() {
                   id="offer-discount"
                   value={offerForm.discount}
                   onChange={(event) => setOfferForm((prev) => ({ ...prev, discount: event.target.value }))}
-                  placeholder="e.g. 15% off"
+                  placeholder="e.g. Buy 1 Get 1 Free"
                 />
               </div>
             </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-2">
+                <Label htmlFor="offer-original-price">Original price (KES)</Label>
+                <Input
+                  id="offer-original-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={offerForm.original_price}
+                  onChange={(event) => setOfferForm((prev) => ({ ...prev, original_price: event.target.value }))}
+                  placeholder="2000"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="offer-sale-price">Sale price (KES)</Label>
+                <Input
+                  id="offer-sale-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={offerForm.sale_price}
+                  onChange={(event) => setOfferForm((prev) => ({ ...prev, sale_price: event.target.value }))}
+                  placeholder="1700"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="offer-discount-percent">Discount %</Label>
+                <Input
+                  id="offer-discount-percent"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={offerForm.discount_percent}
+                  onChange={(event) => setOfferForm((prev) => ({ ...prev, discount_percent: event.target.value }))}
+                  placeholder="Auto if prices set"
+                />
+              </div>
+            </div>
+
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="offer-expires">Expires at</Label>
