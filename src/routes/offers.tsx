@@ -112,9 +112,13 @@ function OffersPage() {
     description: "",
     badge: "",
     discount: "",
+    discount_percent: "",
+    original_price: "",
+    sale_price: "",
     expires_at: "",
     image: "",
   });
+
   const [offerProductSearch, setOfferProductSearch] = useState("");
   const [offerSelectedProductId, setOfferSelectedProductId] = useState<string | null>(null);
 
