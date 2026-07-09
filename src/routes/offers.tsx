@@ -202,6 +202,48 @@ function OffersPage() {
       return;
     }
 
+    const badge = offerForm.badge.trim();
+    const isFlash = badge.toLowerCase() === "flash sale";
+    const isBogo = badge.toLowerCase() === "bogo";
+
+    let origPrice = offerForm.original_price.trim() ? Number(offerForm.original_price) : null;
+    let salePrice = offerForm.sale_price.trim() ? Number(offerForm.sale_price) : null;
+    let discountPct = offerForm.discount_percent.trim() ? Number(offerForm.discount_percent) : null;
+    let discountLabel = offerForm.discount.trim();
+    let expiresAt = offerForm.expires_at.trim() || null;
+
+    // Flash Sale rules: needs original + sale price and an expiry date (urgency).
+    if (isFlash) {
+      if (!origPrice || !salePrice || salePrice >= origPrice) {
+        toast.error("Flash Sale needs an original price and a lower sale price.");
+        return;
+      }
+      if (!expiresAt) {
+        toast.error("Flash Sale needs an expiry date to create urgency.");
+        return;
+      }
+      if (discountPct == null) {
+        discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
+      }
+      if (!discountLabel) discountLabel = `Flash: ${discountPct}% off`;
+    }
+
+    // BOGO rules: effectively 50% off average; force pricing to reflect "2 for the price of 1".
+    if (isBogo) {
+      if (!origPrice) {
+        toast.error("BOGO needs the single-item original price.");
+        return;
+      }
+      salePrice = origPrice; // pay for 1, get 2
+      discountPct = 50;
+      if (!discountLabel) discountLabel = "Buy 1 Get 1 Free";
+    }
+
+    // Default: derive % from prices when not provided.
+    if (!isFlash && !isBogo && discountPct == null && origPrice && salePrice && origPrice > salePrice) {
+      discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
+    }
+
     setSavingOffer(true);
     try {
       const selectedProduct = offerSelectedProductId ? products.find((product) => product.id === offerSelectedProductId) ?? null : null;
@@ -209,27 +251,21 @@ function OffersPage() {
         ? (Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "")
         : offerForm.image.trim();
 
-      const origPrice = offerForm.original_price.trim() ? Number(offerForm.original_price) : null;
-      const salePrice = offerForm.sale_price.trim() ? Number(offerForm.sale_price) : null;
-      let discountPct = offerForm.discount_percent.trim() ? Number(offerForm.discount_percent) : null;
-      if (discountPct == null && origPrice && salePrice && origPrice > salePrice) {
-        discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
-      }
-
       const savedOffer = (await saveOfferFn({
         data: {
           id: editingOfferId ?? undefined,
           title: offerForm.title.trim(),
           description: offerForm.description.trim(),
-          badge: offerForm.badge.trim(),
-          discount: offerForm.discount.trim(),
+          badge,
+          discount: discountLabel,
           discount_percent: discountPct,
           original_price: origPrice,
           sale_price: salePrice,
-          expires_at: offerForm.expires_at.trim() || null,
+          expires_at: expiresAt,
           image: resolvedImage || null,
         },
       })) as OfferItem;
+
 
 
       setOffers((current) => {
@@ -412,12 +448,15 @@ function OffersPage() {
       <section className="section-pad">
         <div className="mx-auto max-w-7xl px-4 md:px-8 grid gap-6 lg:grid-cols-3">
           {offers.map((offer, index) => {
+            const badgeKey = (offer.badge ?? "").toLowerCase();
+            const isFlash = badgeKey.includes("flash");
+            const isBogo = badgeKey.includes("bogo");
             const pct = offer.discount_percent ?? (offer.original_price && offer.sale_price && offer.original_price > offer.sale_price
               ? Math.round(((offer.original_price - offer.sale_price) / offer.original_price) * 100)
               : null);
             return (
             <Reveal key={offer.id} delay={index * 60}>
-              <article className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-soft card-lift">
+              <article className={`relative overflow-hidden rounded-2xl border bg-card shadow-soft card-lift ${isFlash ? "border-red-500 ring-1 ring-red-500/30" : "border-border"}`}>
                 {/* Discount % badge - top right corner */}
                 {pct && pct > 0 ? (
                   <div className="absolute right-3 top-3 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg ring-4 ring-white">
@@ -433,14 +472,23 @@ function OffersPage() {
 
                 <div className="p-6">
                   <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${badgeClasses(offer.badge)}`}>
-                    {offer.badge ?? "Offer"}
+                    {isFlash ? "⚡ " : ""}{isBogo ? "🎁 " : ""}{offer.badge ?? "Offer"}
                   </span>
                   <h2 className="mt-4 font-display text-2xl font-semibold">{offer.title}</h2>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{offer.description ?? "More details available soon."}</p>
 
-                  {(offer.original_price || offer.sale_price) ? (
+                  {isBogo && offer.original_price ? (
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                      {offer.original_price ? (
+                      <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-sm font-semibold text-amber-900">
+                        Pay {formatPrice(offer.original_price)}
+                      </span>
+                      <span className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-base font-bold text-white shadow-sm">
+                        Get 2 items
+                      </span>
+                    </div>
+                  ) : (offer.original_price || offer.sale_price) ? (
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      {offer.original_price && offer.sale_price && offer.original_price > offer.sale_price ? (
                         <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-medium text-red-700 line-through decoration-red-600 decoration-2">
                           {formatPrice(offer.original_price)}
                         </span>
@@ -449,9 +497,14 @@ function OffersPage() {
                         <span className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-base font-bold text-white shadow-sm">
                           {formatPrice(offer.sale_price)}
                         </span>
+                      ) : offer.original_price ? (
+                        <span className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-base font-bold text-white shadow-sm">
+                          {formatPrice(offer.original_price)}
+                        </span>
                       ) : null}
                     </div>
                   ) : null}
+
 
                   {offer.discount ? <p className="mt-3 text-sm font-medium text-foreground">{offer.discount}</p> : null}
                   {offer.expires_at ? (
