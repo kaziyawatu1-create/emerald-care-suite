@@ -170,7 +170,7 @@ function OffersPage() {
 
   function resetOfferForm() {
     setEditingOfferId(null);
-    setOfferForm({ title: "", description: "", badge: "", discount: "", expires_at: "", image: "" });
+    setOfferForm({ title: "", description: "", badge: "", discount: "", discount_percent: "", original_price: "", sale_price: "", expires_at: "", image: "" });
     setOfferProductSearch("");
     setOfferSelectedProductId(null);
   }
