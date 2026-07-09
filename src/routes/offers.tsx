@@ -18,6 +18,9 @@ type OfferItem = {
   description: string | null;
   badge: string | null;
   discount: string | null;
+  discount_percent?: number | null;
+  original_price?: number | null;
+  sale_price?: number | null;
   expires_at: string | null;
   image: string | null;
   created_at?: string;
@@ -34,30 +37,56 @@ const fallbackOffers: OfferItem[] = [
     id: "fallback-1",
     title: "Weekend Wellness Bundle",
     description: "Get 15% off essential vitamins and wellness packs when you order before Sunday.",
-    badge: "Limited time",
+    badge: "Discounted",
     discount: "15% off",
+    discount_percent: 15,
+    original_price: 2000,
+    sale_price: 1700,
     expires_at: null,
     image: null,
   },
   {
     id: "fallback-2",
-    title: "Home Test Collection Discount",
-    description: "Book a home sample collection and enjoy reduced pricing on selected lab packages.",
-    badge: "New",
+    title: "Flash Sale: Home Test Collection",
+    description: "Book a home sample collection today only at reduced pricing.",
+    badge: "Flash Sale",
     discount: "Reduced pricing",
+    discount_percent: 20,
+    original_price: 3500,
+    sale_price: 2800,
     expires_at: null,
     image: null,
   },
   {
     id: "fallback-3",
-    title: "Family Care Offer",
-    description: "Save on multi-person consultations and routine prescription refills for families.",
-    badge: "Popular",
-    discount: "Family savings",
+    title: "Family Care BOGO",
+    description: "Buy one consultation, get one free for family members.",
+    badge: "BOGO",
+    discount: "Buy 1 Get 1",
+    discount_percent: 50,
+    original_price: null,
+    sale_price: null,
     expires_at: null,
     image: null,
   },
 ];
+
+const BADGE_OPTIONS = ["New Arrival", "Discounted", "Flash Sale", "BOGO", "Limited Time", "Popular"] as const;
+
+function badgeClasses(badge: string | null | undefined) {
+  const key = (badge ?? "").toLowerCase();
+  if (key.includes("flash")) return "bg-red-600 text-white border-red-700";
+  if (key.includes("bogo")) return "bg-amber-500 text-white border-amber-600";
+  if (key.includes("new")) return "bg-emerald-600 text-white border-emerald-700";
+  if (key.includes("discount")) return "bg-primary text-primary-foreground border-primary";
+  return "bg-primary/10 text-primary border-primary/20";
+}
+
+function formatPrice(v: number | null | undefined) {
+  if (v == null || Number.isNaN(Number(v))) return "";
+  return `KES ${Number(v).toLocaleString()}`;
+}
+
 
 export const Route = createFileRoute("/offers")({
   head: () => ({
