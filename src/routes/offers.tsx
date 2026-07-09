@@ -209,6 +209,13 @@ function OffersPage() {
         ? (Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "")
         : offerForm.image.trim();
 
+      const origPrice = offerForm.original_price.trim() ? Number(offerForm.original_price) : null;
+      const salePrice = offerForm.sale_price.trim() ? Number(offerForm.sale_price) : null;
+      let discountPct = offerForm.discount_percent.trim() ? Number(offerForm.discount_percent) : null;
+      if (discountPct == null && origPrice && salePrice && origPrice > salePrice) {
+        discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
+      }
+
       const savedOffer = (await saveOfferFn({
         data: {
           id: editingOfferId ?? undefined,
@@ -216,10 +223,14 @@ function OffersPage() {
           description: offerForm.description.trim(),
           badge: offerForm.badge.trim(),
           discount: offerForm.discount.trim(),
+          discount_percent: discountPct,
+          original_price: origPrice,
+          sale_price: salePrice,
           expires_at: offerForm.expires_at.trim() || null,
           image: resolvedImage || null,
         },
       })) as OfferItem;
+
 
       setOffers((current) => {
         if (editingOfferId) {
