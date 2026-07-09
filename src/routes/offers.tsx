@@ -202,6 +202,48 @@ function OffersPage() {
       return;
     }
 
+    const badge = offerForm.badge.trim();
+    const isFlash = badge.toLowerCase() === "flash sale";
+    const isBogo = badge.toLowerCase() === "bogo";
+
+    let origPrice = offerForm.original_price.trim() ? Number(offerForm.original_price) : null;
+    let salePrice = offerForm.sale_price.trim() ? Number(offerForm.sale_price) : null;
+    let discountPct = offerForm.discount_percent.trim() ? Number(offerForm.discount_percent) : null;
+    let discountLabel = offerForm.discount.trim();
+    let expiresAt = offerForm.expires_at.trim() || null;
+
+    // Flash Sale rules: needs original + sale price and an expiry date (urgency).
+    if (isFlash) {
+      if (!origPrice || !salePrice || salePrice >= origPrice) {
+        toast.error("Flash Sale needs an original price and a lower sale price.");
+        return;
+      }
+      if (!expiresAt) {
+        toast.error("Flash Sale needs an expiry date to create urgency.");
+        return;
+      }
+      if (discountPct == null) {
+        discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
+      }
+      if (!discountLabel) discountLabel = `Flash: ${discountPct}% off`;
+    }
+
+    // BOGO rules: effectively 50% off average; force pricing to reflect "2 for the price of 1".
+    if (isBogo) {
+      if (!origPrice) {
+        toast.error("BOGO needs the single-item original price.");
+        return;
+      }
+      salePrice = origPrice; // pay for 1, get 2
+      discountPct = 50;
+      if (!discountLabel) discountLabel = "Buy 1 Get 1 Free";
+    }
+
+    // Default: derive % from prices when not provided.
+    if (!isFlash && !isBogo && discountPct == null && origPrice && salePrice && origPrice > salePrice) {
+      discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
+    }
+
     setSavingOffer(true);
     try {
       const selectedProduct = offerSelectedProductId ? products.find((product) => product.id === offerSelectedProductId) ?? null : null;
@@ -209,27 +251,21 @@ function OffersPage() {
         ? (Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "")
         : offerForm.image.trim();
 
-      const origPrice = offerForm.original_price.trim() ? Number(offerForm.original_price) : null;
-      const salePrice = offerForm.sale_price.trim() ? Number(offerForm.sale_price) : null;
-      let discountPct = offerForm.discount_percent.trim() ? Number(offerForm.discount_percent) : null;
-      if (discountPct == null && origPrice && salePrice && origPrice > salePrice) {
-        discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
-      }
-
       const savedOffer = (await saveOfferFn({
         data: {
           id: editingOfferId ?? undefined,
           title: offerForm.title.trim(),
           description: offerForm.description.trim(),
-          badge: offerForm.badge.trim(),
-          discount: offerForm.discount.trim(),
+          badge,
+          discount: discountLabel,
           discount_percent: discountPct,
           original_price: origPrice,
           sale_price: salePrice,
-          expires_at: offerForm.expires_at.trim() || null,
+          expires_at: expiresAt,
           image: resolvedImage || null,
         },
       })) as OfferItem;
+
 
 
       setOffers((current) => {
