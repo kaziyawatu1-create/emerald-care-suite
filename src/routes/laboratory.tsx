@@ -21,7 +21,15 @@ export const Route = createFileRoute("/laboratory")({
 
 function LaboratoryPage() {
   const bookTestFn = useServerFn(bookLaboratoryTest);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    patient_name: string;
+    patient_phone: string;
+    patient_email: string;
+    service: string;
+    booking_type: "home" | "inhouse" | "office";
+    appointment_date: string;
+    notes: string;
+  }>({
     patient_name: "",
     patient_phone: "",
     patient_email: "",
