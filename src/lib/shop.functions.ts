@@ -354,7 +354,7 @@ export const placeOrder = createServerFn({ method: "POST" })
     });
 
     const subtotal = itemsWithPrice.reduce((s, i) => s + i.subtotal_kes, 0);
-    const delivery_fee = 200;
+    const delivery_fee = 0;
     const total = subtotal + delivery_fee;
 
     const phone = normalizeKenyanPhone(data.customer_phone);

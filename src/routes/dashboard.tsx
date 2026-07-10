@@ -53,6 +53,8 @@ type OfferForm = {
   description: string;
   badge: string;
   discount: string;
+  original_price?: string;
+  sale_price?: string;
   expires_at: string;
   image: string;
 };
@@ -157,7 +159,7 @@ function DashboardPage() {
   const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [], brand_id: null });
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
   const [brandForm, setBrandForm] = useState({ name: "", description: "", logo_url: "", slug: "", is_active: true });
-  const [offerForm, setOfferForm] = useState<OfferForm>({ title: "", description: "", badge: "", discount: "", expires_at: "", image: "" });
+  const [offerForm, setOfferForm] = useState<OfferForm>({ title: "", description: "", badge: "", discount: "", original_price: "", sale_price: "", expires_at: "", image: "" });
   const [offerProductSearch, setOfferProductSearch] = useState("");
   const [offerSelectedProductId, setOfferSelectedProductId] = useState<string | null>(null);
   const [serviceForm, setServiceForm] = useState<ServiceForm>({ name: "", description: "", type: "inhouse" });
@@ -267,7 +269,7 @@ function DashboardPage() {
 
   function resetOfferForm() {
     setEditingOfferId(null);
-    setOfferForm({ title: "", description: "", badge: "", discount: "", expires_at: "", image: "" });
+    setOfferForm({ title: "", description: "", badge: "", discount: "", original_price: "", sale_price: "", expires_at: "", image: "" });
     setOfferProductSearch("");
     setOfferSelectedProductId(null);
   }
@@ -280,7 +282,14 @@ function DashboardPage() {
         title: offer.title,
         description: offer.description ?? "",
         badge: offer.badge ?? "",
-        discount: offer.discount ?? "",
+        discount: (() => {
+          const pct = offer.discount_percent ?? (offer.original_price && offer.sale_price && offer.original_price > offer.sale_price
+            ? Math.round(((offer.original_price - offer.sale_price) / offer.original_price) * 100)
+            : null);
+          return pct != null ? String(pct) : "";
+        })(),
+        original_price: offer.original_price != null ? String(offer.original_price) : "",
+        sale_price: offer.sale_price != null ? String(offer.sale_price) : "",
         expires_at: formatOfferExpiryValue(offer.expires_at),
         image: offer.image ?? matchedProduct?.image_urls?.[0] ?? "",
       });
@@ -301,7 +310,7 @@ function DashboardPage() {
     if (!selectedProduct) {
       if (!normalized) {
         setOfferSelectedProductId(null);
-        setOfferForm((prev) => ({ ...prev, image: "" }));
+        setOfferForm((prev) => ({ ...prev, image: "", original_price: "", sale_price: "" }));
       }
       return;
     }
@@ -309,7 +318,12 @@ function DashboardPage() {
     setOfferSelectedProductId(selectedProduct.id);
     setOfferProductSearch(selectedProduct.name);
     const firstImage = Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "";
-    setOfferForm((prev) => ({ ...prev, image: firstImage }));
+    const discountPct = (() => {
+      const parsed = Number(offerForm.discount);
+      return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : null;
+    })();
+    const computedSale = discountPct != null ? Math.max(0, Math.round(selectedProduct.price_kes * (100 - discountPct) / 100)) : "";
+    setOfferForm((prev) => ({ ...prev, image: firstImage, original_price: String(selectedProduct.price_kes), sale_price: computedSale ? String(computedSale) : prev.sale_price }));
   }
 
   async function handleSaveOffer(e: React.FormEvent) {
@@ -332,7 +346,19 @@ function DashboardPage() {
           title: offerForm.title.trim(),
           description: offerForm.description.trim(),
           badge: offerForm.badge.trim(),
-          discount: offerForm.discount.trim(),
+          discount_percent: (() => {
+            const parsed = Number(offerForm.discount.trim());
+            const orig = offerForm.original_price?.trim() ? Number(offerForm.original_price) : null;
+            const sale = offerForm.sale_price?.trim() ? Number(offerForm.sale_price) : null;
+            let pct = Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : null;
+            if (pct == null && orig != null && sale != null && orig > 0 && sale < orig) {
+              pct = Math.round(((orig - sale) / orig) * 100);
+            }
+            return pct;
+          })(),
+          original_price: offerForm.original_price?.trim() ? Number(offerForm.original_price) : null,
+          sale_price: offerForm.sale_price?.trim() ? Number(offerForm.sale_price) : null,
+          product_id: offerSelectedProductId ?? null,
           expires_at: offerForm.expires_at || "",
           image: resolvedImage,
         },
@@ -1190,7 +1216,7 @@ function DashboardPage() {
                 Description
                 <textarea value={offerForm.description} onChange={(e) => setOfferForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
               </label>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <label className="block text-sm font-medium">
                   Badge
                   <select value={offerForm.badge} onChange={(e) => setOfferForm((prev) => ({ ...prev, badge: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3">
@@ -1200,14 +1226,22 @@ function DashboardPage() {
                   </select>
                 </label>
                 <label className="block text-sm font-medium">
-                  Discount label
-                  <input value={offerForm.discount} onChange={(e) => setOfferForm((prev) => ({ ...prev, discount: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="15% off" />
+                  Original price (KES)
+                  <input value={offerForm.original_price} onChange={(e) => setOfferForm((prev) => ({ ...prev, original_price: e.target.value }))} type="number" className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="Auto-filled from product" />
+                </label>
+                <label className="block text-sm font-medium">
+                  Discount (%)
+                  <input value={offerForm.discount} onChange={(e) => setOfferForm((prev) => ({ ...prev, discount: e.target.value }))} type="number" min="0" max="100" className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="e.g. 15" />
                 </label>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <label className="block text-sm font-medium">
                   Expires at
                   <input type="date" value={offerForm.expires_at} onChange={(e) => setOfferForm((prev) => ({ ...prev, expires_at: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                </label>
+                <label className="block text-sm font-medium">
+                  Sale price (KES)
+                  <input value={offerForm.sale_price} onChange={(e) => setOfferForm((prev) => ({ ...prev, sale_price: e.target.value }))} type="number" className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="Auto-calculated" />
                 </label>
                 <label className="block text-sm font-medium">
                   Product on offer

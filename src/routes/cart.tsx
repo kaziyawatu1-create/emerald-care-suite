@@ -15,7 +15,7 @@ export const Route = createFileRoute("/cart")({
 
 function CartPage() {
   const { items, setQty, remove, subtotal, count, clear } = useCart();
-  const deliveryFee = items.length > 0 ? 200 : 0;
+  const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
   return (

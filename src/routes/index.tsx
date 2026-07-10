@@ -19,7 +19,7 @@ import {
 import { Counter } from "../components/site/Counter";
 import { Reveal } from "../components/site/Reveal";
 import { TestimonialsCarousel } from "../components/site/TestimonialsCarousel";
-import pathwayLabLogo from "../assets/pathway-lab-logo.svg";
+import pathwayLabLogo from "../assets/pathway.png";
 import clip1 from "../assets/marketing2.mp4";
 import clip2 from "../assets/marketing.mp4";
 import {
@@ -99,7 +99,7 @@ function Index() {
               <Link to="/laboratory" className="rounded-full bg-[#0047AB] px-7 py-3.5 text-sm font-display font-semibold text-white shadow-elegant transition-transform hover:-translate-y-0.5 hover:bg-[#003b8f]">
                 Book Lab Test
               </Link>
-              <Link to="/pharmacy" className="rounded-full border border-[#0047AB]/25 bg-white/90 px-7 py-3.5 text-sm font-display font-semibold text-[#0047AB] backdrop-blur-sm transition-colors hover:bg-white">
+              <Link to="/shop" className="rounded-full border border-[#0047AB]/25 bg-white/90 px-7 py-3.5 text-sm font-display font-semibold text-[#0047AB] backdrop-blur-sm transition-colors hover:bg-white">
                 Shop Now
               </Link>
             </div>
@@ -170,7 +170,6 @@ function Index() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
                   Promotional Video
                 </span>
-                <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">A short brand story your visitors can watch instantly</h2>
               </div>
             </div>
           </Reveal>
@@ -202,7 +201,7 @@ function Index() {
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
                 Why Choose Nuno Pharmacy
               </span>
-              <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Professional care with premium standards</h2>
+              <h2 className="mt-5 font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl">Professional care with premium standards</h2>
             </div>
           </Reveal>
           <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -232,7 +231,7 @@ function Index() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gold">
                   Our Services
                 </span>
-                <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Healthcare solutions across every need</h2>
+                <h2 className="mt-5 font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl">Healthcare solutions across every need</h2>
               </div>
               <p className="max-w-xl text-muted-foreground">
                 Clean processes, professional guidance and carefully curated products for daily health and specialist care.
@@ -310,7 +309,7 @@ function Index() {
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
               Laboratory Services
             </span>
-            <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Professional Laboratory Services</h2>
+            <h2 className="mt-5 font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl">Professional Laboratory Services</h2>
             <div className="mt-7 grid gap-3 sm:grid-cols-2">
               {[
                 "Rapid HIV Testing",
@@ -342,7 +341,7 @@ function Index() {
               <span className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gold">
                 Featured Products
               </span>
-              <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Curated essentials for wellness and lifestyle</h2>
+              <h2 className="mt-5 font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl">Curated essentials for wellness and lifestyle</h2>
             </div>
           </Reveal>
           <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -373,7 +372,7 @@ function Index() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider">
                   Home Sample Collection
                 </span>
-                <h2 className="mt-5 font-display text-4xl md:text-5xl font-bold leading-[1.02]">Can't Visit Us? We Come To You.</h2>
+                <h2 className="mt-5 font-display text-4xl font-bold leading-[1.02] tracking-[-0.02em] text-primary-foreground sm:text-5xl">Can't Visit Us? We Come To You.</h2>
                 <p className="mt-5 max-w-xl text-base leading-relaxed text-primary-foreground/82 md:text-lg">
                   Professional home and office sample collection services delivered safely and conveniently by trained personnel.
                 </p>
@@ -422,7 +421,7 @@ function Index() {
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
               Trusted Partners
             </span>
-            <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Recognized suppliers and healthcare partners</h2>
+            <h2 className="mt-5 font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl">Recognized suppliers and healthcare partners</h2>
           </Reveal>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {partners.map((partner, index) => (
@@ -443,7 +442,7 @@ function Index() {
               <span className="inline-flex items-center gap-2 rounded-full border border-gold/20 bg-gold/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gold">
                 Contact
               </span>
-              <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Visit or speak with our team</h2>
+              <h2 className="mt-5 font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl">Visit or speak with our team</h2>
               <p className="mt-5 text-muted-foreground leading-relaxed">
                 Reach us for laboratory appointments, medicine inquiries, home visits or general healthcare support.
               </p>

@@ -23,7 +23,7 @@ function CheckoutPage() {
   const [method, setMethod] = useState<"mpesa" | "cod">("mpesa");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const deliveryFee = items.length > 0 ? 200 : 0;
+  const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
   if (items.length === 0) {

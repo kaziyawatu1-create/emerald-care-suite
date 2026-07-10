@@ -28,14 +28,14 @@ type Product = CatalogProduct;
 
 function ProductCardSkeleton() {
   return (
-    <div className="h-full flex flex-col rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft">
-      <div className="h-40 w-full rounded-2xl bg-muted animate-pulse" />
-      <div className="mt-4 h-5 w-2/3 rounded bg-muted animate-pulse" />
-      <div className="mt-3 h-4 w-full rounded bg-muted/80 animate-pulse" />
-      <div className="mt-2 h-4 w-4/5 rounded bg-muted/70 animate-pulse" />
-      <div className="mt-6 flex items-center justify-between">
-        <div className="h-6 w-20 rounded bg-muted animate-pulse" />
-        <div className="h-10 w-24 rounded-full bg-muted animate-pulse" />
+    <div className="h-full flex flex-col rounded-[var(--radius-2xl)] border border-border bg-card p-4 shadow-soft">
+      <div className="h-32 w-full rounded-2xl bg-muted animate-pulse" />
+      <div className="mt-4 h-4 w-2/3 rounded bg-muted animate-pulse" />
+      <div className="mt-3 h-3 w-full rounded bg-muted/80 animate-pulse" />
+      <div className="mt-2 h-3 w-4/5 rounded bg-muted/70 animate-pulse" />
+      <div className="mt-5 flex items-center justify-between">
+        <div className="h-5 w-16 rounded bg-muted animate-pulse" />
+        <div className="h-8 w-20 rounded-full bg-muted animate-pulse" />
       </div>
     </div>
   );
@@ -207,11 +207,11 @@ function ShopPage() {
                   const added = justAdded === p.id;
                   return (
                     <Reveal key={p.id} delay={index * 30}>
-                      <article className="h-full flex flex-col rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift">
+                      <article className="h-full flex flex-col rounded-[var(--radius-2xl)] border border-border bg-card p-4 shadow-soft card-lift sm:p-5">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <h3 className="font-display text-lg font-bold leading-snug">{p.name}</h3>
-                            <p className="text-xs text-muted-foreground mt-1">per {p.unit}</p>
+                            <h3 className="font-display text-base font-bold leading-snug">{p.name}</h3>
+                            <p className="mt-1 text-[11px] text-muted-foreground">per {p.unit}</p>
                           </div>
                           {p.requires_prescription && (
                             <span className="rounded-full bg-gold/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--gold)]">
@@ -222,24 +222,24 @@ function ShopPage() {
                         <img
                           src={getProductImages(p)[0]}
                           alt={p.name}
-                          className="mt-5 aspect-[4/3] w-full rounded-[1rem] object-cover border border-border"
+                          className="mt-4 aspect-[4/3] h-32 w-full rounded-[1rem] object-cover border border-border sm:h-36"
                           loading="lazy"
                         />
-                        <p className="mt-3 text-sm text-muted-foreground leading-relaxed flex-1 overflow-hidden text-ellipsis line-clamp-1">{p.description}</p>
+                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-1 flex-1">{p.description}</p>
                         {!p.in_stock ? (
                           <span className="mt-4 inline-flex w-fit rounded-full border border-destructive/20 bg-destructive/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-destructive">
                             Out of stock
                           </span>
                         ) : null}
-                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                          <span className="font-display text-xl font-bold text-primary">{formatKES(price)}</span>
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                          <span className="font-display text-lg font-bold text-primary">{formatKES(price)}</span>
                           <div className="flex flex-wrap gap-2">
                             <button
                               onClick={() => {
                                 setActiveProduct(p);
                                 setActiveProductImageIndex(0);
                               }}
-                              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:border-primary hover:text-primary"
+                              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-primary hover:text-primary sm:text-sm"
                             >
                               <Eye className="h-4 w-4" /> View
                             </button>
@@ -251,7 +251,7 @@ function ShopPage() {
                                 window.setTimeout(() => setJustAdded((v) => (v === p.id ? null : v)), 1200);
                               }}
                               disabled={!p.in_stock}
-                              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition sm:text-sm ${
                                 added ? "bg-primary/10 text-primary" : "btn-gradient"
                               } ${!p.in_stock ? "cursor-not-allowed opacity-60" : ""}`}
                             >

@@ -10,9 +10,11 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Button } from "../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "sonner";
 import productPlaceholder from "../assets/product-placeholder.svg";
 import { listOffers, upsertOffer } from "../lib/offers.functions";
+import { filterOfferProducts } from "../lib/offer-product-search";
 import { listProducts } from "../lib/shop.functions";
 
 type OfferItem = {
@@ -20,7 +22,6 @@ type OfferItem = {
   title: string;
   description: string | null;
   badge: string | null;
-  discount: string | null;
   discount_percent?: number | null;
   original_price?: number | null;
   sale_price?: number | null;
@@ -43,7 +44,6 @@ const fallbackOffers: OfferItem[] = [
     title: "Weekend Wellness Bundle",
     description: "Get 15% off essential vitamins and wellness packs when you order before Sunday.",
     badge: "Discounted",
-    discount: "15% off",
     discount_percent: 15,
     original_price: 2000,
     sale_price: 1700,
@@ -55,7 +55,6 @@ const fallbackOffers: OfferItem[] = [
     title: "Flash Sale: Home Test Collection",
     description: "Book a home sample collection today only at reduced pricing.",
     badge: "Flash Sale",
-    discount: "Reduced pricing",
     discount_percent: 20,
     original_price: 3500,
     sale_price: 2800,
@@ -67,7 +66,6 @@ const fallbackOffers: OfferItem[] = [
     title: "Family Care BOGO",
     description: "Buy one consultation, get one free for family members.",
     badge: "BOGO",
-    discount: "Buy 1 Get 1",
     discount_percent: 50,
     original_price: null,
     sale_price: null,
@@ -76,7 +74,13 @@ const fallbackOffers: OfferItem[] = [
   },
 ];
 
-const BADGE_OPTIONS = ["New Arrival", "Discounted", "Flash Sale", "BOGO", "Limited Time", "Popular"] as const;
+const BADGE_OPTIONS = [
+   "BOGO", 
+   "New Arrival",
+   "Discounted", 
+   "Flash Sale",
+   "Limited Time", 
+   "Popular"] as const;
 
 function badgeClasses(badge: string | null | undefined) {
   const key = (badge ?? "").toLowerCase();
@@ -111,6 +115,7 @@ function OffersPage() {
   const [offers, setOffers] = useState<OfferItem[]>(fallbackOffers);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState<OfferItem | null>(null);
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
   const [savingOffer, setSavingOffer] = useState(false);
   const [offerForm, setOfferForm] = useState({
@@ -118,7 +123,6 @@ function OffersPage() {
     description: "",
     badge: "",
     discount: "",
-    discount_percent: "",
     original_price: "",
     sale_price: "",
     expires_at: "",
@@ -176,7 +180,7 @@ function OffersPage() {
 
   function resetOfferForm() {
     setEditingOfferId(null);
-    setOfferForm({ title: "", description: "", badge: "", discount: "", discount_percent: "", original_price: "", sale_price: "", expires_at: "", image: "" });
+    setOfferForm({ title: "", description: "", badge: "", discount: "", original_price: "", sale_price: "", expires_at: "", image: "" });
     setOfferProductSearch("");
     setOfferSelectedProductId(null);
   }
@@ -207,7 +211,7 @@ function OffersPage() {
     const firstImage = Array.isArray(selectedProduct.image_urls)
       ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? ""
       : "";
-    const discountPercent = parseDiscountPercent(offerForm.discount_percent);
+    const discountPercent = parseDiscountPercent(offerForm.discount);
     const computedSale = calculateSalePrice(selectedProduct.price_kes, discountPercent);
 
     setOfferForm((prev) => ({
@@ -218,23 +222,52 @@ function OffersPage() {
     }));
   }
 
+  function handleOfferProductSearchChange(value: string) {
+    setOfferProductSearch(value);
+
+    if (!value.trim()) {
+      return;
+    }
+
+    const selectedProduct = offerSelectedProductId
+      ? products.find((product) => product.id === offerSelectedProductId) ?? null
+      : null;
+
+    if (selectedProduct && selectedProduct.name.toLowerCase() === value.trim().toLowerCase()) {
+      return;
+    }
+  }
+
   useEffect(() => {
     const originalPrice = Number(offerForm.original_price);
-    const discountPercent = parseDiscountPercent(offerForm.discount_percent);
+    const discountPercent = parseDiscountPercent(offerForm.discount);
+    const salePrice = offerForm.sale_price.trim() ? Number(offerForm.sale_price) : null;
     const badgeKey = offerForm.badge.trim().toLowerCase();
 
     if (badgeKey === "bogo" && originalPrice > 0) {
-      setOfferForm((prev) => ({ ...prev, sale_price: String(Math.round(originalPrice)) }));
+      setOfferForm((prev) => ({
+        ...prev,
+        sale_price: String(Math.round(originalPrice)),
+        discount: prev.discount || "50",
+      }));
+      return;
+    }
+
+    if (originalPrice > 0 && salePrice != null && salePrice > 0 && salePrice < originalPrice) {
+      const derivedDiscount = Math.round(((originalPrice - salePrice) / originalPrice) * 100);
+      if (derivedDiscount >= 0 && derivedDiscount <= 100) {
+        setOfferForm((prev) => (prev.discount === String(derivedDiscount) ? prev : { ...prev, discount: String(derivedDiscount) }));
+      }
       return;
     }
 
     if (originalPrice > 0 && discountPercent != null) {
       const computed = calculateSalePrice(originalPrice, discountPercent);
       if (computed != null) {
-        setOfferForm((prev) => ({ ...prev, sale_price: String(computed) }));
+        setOfferForm((prev) => (prev.sale_price === String(computed) ? prev : { ...prev, sale_price: String(computed) }));
       }
     }
-  }, [offerForm.original_price, offerForm.discount_percent, offerForm.badge]);
+  }, [offerForm.original_price, offerForm.discount, offerForm.sale_price, offerForm.badge]);
 
   async function handleSaveOffer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -250,14 +283,15 @@ function OffersPage() {
     const selectedProduct = offerSelectedProductId ? products.find((product) => product.id === offerSelectedProductId) ?? null : null;
     let origPrice = offerForm.original_price.trim() ? Number(offerForm.original_price) : selectedProduct?.price_kes ?? null;
     let salePrice = offerForm.sale_price.trim() ? Number(offerForm.sale_price) : null;
-    let discountPct = offerForm.discount_percent.trim() ? Number(offerForm.discount_percent) : null;
-    let discountLabel = offerForm.discount.trim();
-    let expiresAt = offerForm.expires_at.trim() || null;
-
-    if (discountPct == null && discountLabel) {
-      const labelMatch = discountLabel.match(/(\d{1,3})\s*%/);
-      discountPct = labelMatch ? Number(labelMatch[1]) : null;
+    let discountPct = offerForm.discount.trim() ? Number(offerForm.discount) : null;
+    if (discountPct != null && (!Number.isFinite(discountPct) || discountPct < 0 || discountPct > 100)) {
+      discountPct = null;
     }
+    if (discountPct == null && origPrice != null && salePrice != null && salePrice > 0 && salePrice < origPrice) {
+      discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
+    }
+    let discountLabel = discountPct != null ? `${discountPct}% off` : "";
+    let expiresAt = offerForm.expires_at.trim() || null;
 
     if (isBogo && origPrice != null) {
       salePrice = origPrice;
@@ -291,13 +325,12 @@ function OffersPage() {
         ? (Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "")
         : offerForm.image.trim();
 
-      const savedOffer = (await saveOfferFn({
+      const savedOfferResponse = await saveOfferFn({
         data: {
           id: editingOfferId ?? undefined,
           title: offerForm.title.trim(),
           description: offerForm.description.trim(),
           badge,
-          discount: discountLabel,
           discount_percent: discountPct,
           original_price: origPrice,
           sale_price: salePrice,
@@ -305,9 +338,8 @@ function OffersPage() {
           expires_at: expiresAt,
           image: resolvedImage || null,
         },
-      })) as OfferItem;
-
-
+      });
+      const savedOffer = savedOfferResponse as unknown as OfferItem;
 
       setOffers((current) => {
         if (editingOfferId) {
@@ -332,25 +364,70 @@ function OffersPage() {
     setOfferDialogOpen(true);
   }
 
+  function openOfferDetails(offer: OfferItem) {
+    setSelectedOffer(offer);
+  }
+
+  function closeOfferDetails() {
+    setSelectedOffer(null);
+  }
+
   return (
     <>
-      <PageHeader
-        eyebrow="Offers"
-        title="Special deals made for your wellness routine"
-        subtitle="Browse current promotions on consultations, lab services, and everyday essentials."
-      />
-
-      <div className="mx-auto mb-8 max-w-7xl px-4 md:px-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Create new offers from the admin popup form and they will appear in the offers list below.</p>
-        </div>
-        <Button onClick={openOfferDialog} className="rounded-full px-4 py-2 text-sm font-semibold">
-          Add offer
-        </Button>
-      </div>
-
+      <Dialog open={!!selectedOffer} onOpenChange={(open) => (open ? null : closeOfferDetails())}>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedOffer?.title ?? "Offer details"}</DialogTitle>
+            <DialogDescription>View the full promotion details, pricing and availability.</DialogDescription>
+          </DialogHeader>
+          {selectedOffer ? (
+            <div className="space-y-5 py-2">
+              <div className="overflow-hidden rounded-[1.25rem] border border-border">
+                <img src={selectedOffer.image || productPlaceholder} alt={selectedOffer.title} className="h-56 w-full object-cover" />
+              </div>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] ${badgeClasses(selectedOffer.badge)}`}>
+                    {selectedOffer.badge ?? "Offer"}
+                  </span>
+                  {selectedOffer.expires_at ? (
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                      Expires {formatOfferExpiryValue(selectedOffer.expires_at)}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-base leading-relaxed text-muted-foreground">{selectedOffer.description ?? "More details available soon."}</p>
+                <div className="rounded-[1rem] border border-border bg-card p-4">
+                  <p className="text-sm text-muted-foreground">Pricing</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    {selectedOffer.original_price != null && selectedOffer.sale_price != null && selectedOffer.original_price > selectedOffer.sale_price ? (
+                      <>
+                        <span className="text-sm text-muted-foreground line-through">{formatPrice(selectedOffer.original_price)}</span>
+                        <span className="text-2xl font-semibold text-foreground">{formatPrice(selectedOffer.sale_price)}</span>
+                      </>
+                    ) : selectedOffer.sale_price != null ? (
+                      <span className="text-2xl font-semibold text-foreground">{formatPrice(selectedOffer.sale_price)}</span>
+                    ) : selectedOffer.original_price != null ? (
+                      <span className="text-2xl font-semibold text-foreground">{formatPrice(selectedOffer.original_price)}</span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button type="button" variant="outline" onClick={closeOfferDetails}>Close</Button>
+                <Button type="button" onClick={() => {
+                  add({ id: `offer-${selectedOffer.id}`, name: selectedOffer.title, price: Number(selectedOffer.sale_price ?? selectedOffer.original_price ?? 0), category: "Offer" }, 1);
+                  closeOfferDetails();
+                }}>
+                  Add to cart
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
       <Dialog open={offerDialogOpen} onOpenChange={(open) => (open ? setOfferDialogOpen(true) : setOfferDialogOpen(false))}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingOfferId ? "Edit offer" : "Create new offer"}</DialogTitle>
             <DialogDescription>Use the offers table fields to create a new promotion.</DialogDescription>
@@ -379,29 +456,16 @@ function OffersPage() {
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="offer-badge">Badge</Label>
-                <select
-                  id="offer-badge"
-                  value={offerForm.badge}
-                  onChange={(event) => setOfferForm((prev) => ({ ...prev, badge: event.target.value }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors md:text-sm"
-                >
-                  <option value="">Select badge</option>
-                  {BADGE_OPTIONS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="offer-discount-percent">Discount (%)</Label>
-                <Input
-                  id="offer-discount-percent"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={offerForm.discount_percent}
-                  onChange={(event) => setOfferForm((prev) => ({ ...prev, discount_percent: event.target.value }))}
-                  placeholder="e.g. 15"
-                />
+                <Select value={offerForm.badge} onValueChange={(value) => setOfferForm((prev) => ({ ...prev, badge: value }))}>
+                  <SelectTrigger id="offer-badge">
+                    <SelectValue placeholder="Select badge" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BADGE_OPTIONS.map((b) => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -417,20 +481,36 @@ function OffersPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="offer-product">Product on offer</Label>
-                <select
-                  id="offer-product"
-                  value={offerSelectedProductId ?? ""}
-                  onChange={(event) => handleOfferProductSelection(event.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors md:text-sm"
-                  required
-                >
-                  <option value="">Select a product…</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} — KES {Number(product.price_kes).toLocaleString()}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-2">
+                  <Input
+                    id="offer-product"
+                    value={offerProductSearch}
+                    onChange={(event) => handleOfferProductSearchChange(event.target.value)}
+                    placeholder="Search products by name or category"
+                  />
+                  {offerProductSearch.trim() ? (
+                    <div className="max-h-48 overflow-auto rounded-lg border border-border bg-background p-2 shadow-sm">
+                      {filterOfferProducts(products, offerProductSearch).length > 0 ? (
+                        filterOfferProducts(products, offerProductSearch).map((product) => (
+                          <button
+                            key={product.id}
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition hover:bg-muted"
+                            onClick={() => handleOfferProductSelection(product.id)}
+                          >
+                            <span>
+                              <span className="font-medium">{product.name}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">{product.category ?? "Product"}</span>
+                            </span>
+                            <span className="text-xs font-semibold text-primary">KES {Number(product.price_kes).toLocaleString()}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">No matching products found.</p>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -500,21 +580,21 @@ function OffersPage() {
               ? `Save KES ${discountAmount.toLocaleString()}`
               : pct && pct > 0
                 ? `-${pct}%`
-                : offer.discount ?? null;
+                : null;
             return (
             <Reveal key={offer.id} delay={index * 60}>
-              <article className={`group overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-soft card-lift transition hover:-translate-y-1 hover:shadow-xl ${isFlash ? "border-red-500 ring-1 ring-red-500/30" : ""}`}>
+              <article className={`group overflow-hidden rounded-[1.25rem] border border-border bg-card shadow-soft card-lift transition hover:-translate-y-1 hover:shadow-xl ${isFlash ? "border-red-500 ring-1 ring-red-500/30" : ""}`}>
                 <div className="relative overflow-hidden">
-                  <img src={offer.image || productPlaceholder} alt={offer.title} className="h-64 w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <img src={offer.image || productPlaceholder} alt={offer.title} className="h-44 w-full object-cover transition duration-500 group-hover:scale-105 sm:h-48" />
                   <div className="absolute inset-x-0 top-4 flex items-start justify-between px-4">
                     <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] ${badgeClasses(offer.badge)}`}>
                       {offer.badge ?? "Offer"}
                     </span>
                     <div className="flex items-center gap-2">
-                      <button type="button" aria-label="View offer" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-sm transition hover:bg-white">
+                      <button type="button" aria-label="View offer" onClick={() => openOfferDetails(offer)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-sm transition hover:bg-white">
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button type="button" aria-label="Save offer" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-sm transition hover:bg-white">
+                      <button type="button" aria-label="Save offer" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-sm transition hover:bg-white">
                         <Heart className="h-4 w-4" />
                       </button>
                     </div>
@@ -526,29 +606,28 @@ function OffersPage() {
                   ) : null}
                 </div>
 
-                <div className="p-6 sm:p-7">
-                  <h2 className="font-display text-xl font-semibold text-foreground">{offer.title}</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-2">{offer.description ?? "More details available soon."}</p>
+                <div className="p-4 sm:p-5">
+                  <h2 className="font-display text-lg font-semibold text-foreground">{offer.title}</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-1">{offer.description ?? "More details available soon."}</p>
 
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
                     {hasPriceComparison ? (
                       <>
                         <span className="text-sm text-muted-foreground line-through">{formatPrice(offer.original_price)}</span>
-                        <span className="text-2xl font-semibold text-foreground">{formatPrice(effectiveSalePrice)}</span>
+                        <span className="text-lg font-semibold text-foreground">{formatPrice(effectiveSalePrice)}</span>
                       </>
                     ) : effectiveSalePrice != null ? (
-                      <span className="text-2xl font-semibold text-foreground">{formatPrice(effectiveSalePrice)}</span>
+                      <span className="text-lg font-semibold text-foreground">{formatPrice(effectiveSalePrice)}</span>
                     ) : offer.original_price != null ? (
-                      <span className="text-2xl font-semibold text-foreground">{formatPrice(offer.original_price)}</span>
+                      <span className="text-lg font-semibold text-foreground">{formatPrice(offer.original_price)}</span>
                     ) : null}
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     {discountBadge ? <span className="inline-flex rounded-full bg-red-600/10 px-3 py-1 text-sm font-semibold text-red-600">{discountBadge}</span> : null}
-                    {offer.discount ? <p className="text-sm font-medium text-foreground">{offer.discount}</p> : null}
                   </div>
 
-                  <div className="mt-6">
+                  <div className="mt-5">
                     <button
                       type="button"
                       onClick={() => add({
@@ -557,14 +636,14 @@ function OffersPage() {
                         price: Number(effectiveSalePrice ?? offer.original_price ?? 0),
                         category: "Offer",
                       }, 1)}
-                      className="w-full rounded-full btn-gradient px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
+                      className="w-full rounded-full btn-gradient px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
                     >
                       Add to cart
                     </button>
                   </div>
 
                   {offer.expires_at ? (
-                    <p className="mt-4 text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                    <p className="mt-3 text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       {(() => {
                         const target = new Date(offer.expires_at);
                         if (Number.isNaN(target.getTime())) return `Ends ${offer.expires_at}`;

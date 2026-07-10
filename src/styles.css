@@ -108,6 +108,20 @@
   html {
     scroll-behavior: smooth;
   }
+  button,
+  [role="button"],
+  a,
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [disabled],
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -163,8 +177,8 @@
 }
 
 @utility section-pad {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
+  padding-top: 3.25rem;
+  padding-bottom: 3.25rem;
 }
 
 @keyframes fadeUp {

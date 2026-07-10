@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { computeOfferPricing } from "./offers-pricing";
+import { getOfferSelectColumns } from "./offer-query-columns";
 
 function publicClient() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -14,7 +15,7 @@ export const listOffers = createServerFn({ method: "GET" }).handler(async () => 
   const supabase = publicClient();
   const { data, error } = await supabase
     .from("offers")
-    .select("id,title,description,badge,discount,discount_percent,original_price,sale_price,product_id,expires_at,image,created_at")
+    .select(getOfferSelectColumns())
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -30,7 +31,6 @@ const offerInputSchema = z.object({
   title: z.string().min(1).max(160),
   description: z.string().max(600).optional().default(""),
   badge: z.string().max(60).optional().default(""),
-  discount: z.string().max(80).optional().default(""),
   discount_percent: z.number().int().min(0).max(100).nullable().optional(),
   original_price: z.number().nonnegative().nullable().optional(),
   sale_price: z.number().nonnegative().nullable().optional(),
@@ -45,27 +45,33 @@ export const upsertOffer = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     let productPrice: number | null = null;
+    let productImage: string | null = null;
     if (data.product_id) {
       const { data: productData, error: productError } = await supabaseAdmin
         .from("products")
-        .select("price_kes")
+        .select("price_kes,image_urls")
         .eq("id", data.product_id)
         .maybeSingle();
-        console.log("productData", productData, "productError", productError);
 
       if (productError) throw new Error(productError.message);
       if (productData?.price_kes != null) {
         productPrice = Number(productData.price_kes);
       }
+      if (Array.isArray(productData?.image_urls)) {
+        productImage = productData.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? null;
+      }
     }
-    console.log("productPrice", productPrice);
+
+    const resolvedDiscountPercent = typeof data.discount_percent === "number"
+      ? data.discount_percent
+      : null;
 
     const pricing = computeOfferPricing({
       productId: data.product_id,
       productPrice,
       originalPrice: data.product_id ? productPrice ?? data.original_price ?? null : data.original_price ?? null,
       salePrice: data.sale_price ?? null,
-      discountPercent: data.discount_percent ?? null,
+      discountPercent: resolvedDiscountPercent ?? null,
     });
 
     const payload = {
@@ -73,19 +79,18 @@ export const upsertOffer = createServerFn({ method: "POST" })
       title: data.title,
       description: data.description || null,
       badge: data.badge || null,
-      discount: data.discount || null,
-      discount_percent: data.discount_percent ?? null,
+      discount_percent: resolvedDiscountPercent ?? null,
       original_price: pricing.original_price,
       sale_price: pricing.sale_price,
       product_id: data.product_id || null,
       expires_at: data.expires_at || null,
-      image: data.image || null,
+      image: data.image || productImage || null,
     };
 
     const { data: saved, error } = await supabaseAdmin
       .from("offers")
       .upsert(payload, { onConflict: "id" })
-      .select("id,title,description,badge,discount,discount_percent,original_price,sale_price,product_id,expires_at,image,created_at")
+      .select(getOfferSelectColumns())
       .single();
 
     if (error) throw new Error(error.message);

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/skincare")({
   head: () => ({
     meta: [
       { title: "Skincare | Nuno Pharmacy" },
-      { name: "description", content: "Shop premium skincare — Yusra, CeraVe, serums, sunscreens and acne solutions. Add to cart and pay with M-Pesa or on delivery." },
+      { name: "description", content: "Shop premium skincare — serums, cleansers, moisturizers, sunscreens and acne solutions. Add to cart and pay with M-Pesa or on delivery." },
       { property: "og:title", content: "Nuno Pharmacy Skincare" },
       { property: "og:description", content: "Premium skincare with a clean, trusted retail experience." },
     ],
