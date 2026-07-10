@@ -393,42 +393,7 @@ function OffersPage() {
                 </select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="offer-discount">Discount label</Label>
-                <Input
-                  id="offer-discount"
-                  value={offerForm.discount}
-                  onChange={(event) => setOfferForm((prev) => ({ ...prev, discount: event.target.value }))}
-                  placeholder="e.g. Buy 1 Get 1 Free"
-                />
-              </div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <div className="grid gap-2">
-                <Label htmlFor="offer-original-price">Original price (KES)</Label>
-                <Input
-                  id="offer-original-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={offerForm.original_price}
-                  onChange={(event) => setOfferForm((prev) => ({ ...prev, original_price: event.target.value }))}
-                  placeholder="2000"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="offer-sale-price">Sale price (KES)</Label>
-                <Input
-                  id="offer-sale-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={offerForm.sale_price}
-                  onChange={(event) => setOfferForm((prev) => ({ ...prev, sale_price: event.target.value }))}
-                  placeholder="1700"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="offer-discount-percent">Discount %</Label>
+                <Label htmlFor="offer-discount-percent">Discount (%)</Label>
                 <Input
                   id="offer-discount-percent"
                   type="number"
@@ -436,14 +401,14 @@ function OffersPage() {
                   max="100"
                   value={offerForm.discount_percent}
                   onChange={(event) => setOfferForm((prev) => ({ ...prev, discount_percent: event.target.value }))}
-                  placeholder="Auto if prices set"
+                  placeholder="e.g. 15"
                 />
               </div>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="offer-expires">Expires at</Label>
+                <Label htmlFor="offer-expires">Expire date</Label>
                 <Input
                   id="offer-expires"
                   type="date"
@@ -467,8 +432,39 @@ function OffersPage() {
                     </option>
                   ))}
                 </datalist>
-                <p className="text-xs text-muted-foreground">The offer card image will use the selected product image.</p>
               </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="offer-original-price">Original price (KES)</Label>
+                <Input
+                  id="offer-original-price"
+                  type="number"
+                  value={offerForm.original_price}
+                  readOnly
+                  placeholder="Auto-filled from product"
+                  className="bg-muted/50"
+                />
+                <p className="text-xs text-muted-foreground">Taken from the selected product.</p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="offer-sale-price">Sale price (KES)</Label>
+                <Input
+                  id="offer-sale-price"
+                  type="number"
+                  value={offerForm.sale_price}
+                  readOnly
+                  placeholder="Auto-calculated"
+                  className="bg-muted/50"
+                />
+                <p className="text-xs text-muted-foreground">Original − (Discount % × Original).</p>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Product image</Label>
+              <p className="text-xs text-muted-foreground">The offer card image uses the selected product's image.</p>
             </div>
             <div className="overflow-hidden rounded-2xl border border-border">
               <img src={offerForm.image || productPlaceholder} alt="Offer preview" className="h-40 w-full object-cover" />
