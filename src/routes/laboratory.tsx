@@ -46,7 +46,7 @@ function LaboratoryPage() {
     setStatus({ type: "idle", message: "" });
     setIsSubmitting(true);
     try {
-      const response = await bookTestFn(form);
+      const response = await bookTestFn({ data: form });
       if (!response || !response.success) {
         throw new Error(response?.message || "Unable to submit your booking request.");
       }
