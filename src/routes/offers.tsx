@@ -191,23 +191,22 @@ function OffersPage() {
     return Math.max(0, Math.round(originalPrice * (100 - discountPercent) / 100));
   }
 
-  function handleOfferProductSelection(nextValue: string) {
-    setOfferProductSearch(nextValue);
-
-    const normalized = nextValue.trim().toLowerCase();
-    const selectedProduct = products.find((product) => product.id === nextValue || product.name.toLowerCase() === normalized);
-
-    if (!selectedProduct) {
-      if (!normalized) {
-        setOfferSelectedProductId(null);
-        setOfferForm((prev) => ({ ...prev, image: "" }));
-      }
+  function handleOfferProductSelection(productId: string) {
+    if (!productId) {
+      setOfferSelectedProductId(null);
+      setOfferProductSearch("");
+      setOfferForm((prev) => ({ ...prev, image: "", original_price: "", sale_price: "" }));
       return;
     }
 
+    const selectedProduct = products.find((product) => product.id === productId);
+    if (!selectedProduct) return;
+
     setOfferSelectedProductId(selectedProduct.id);
     setOfferProductSearch(selectedProduct.name);
-    const firstImage = Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "";
+    const firstImage = Array.isArray(selectedProduct.image_urls)
+      ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? ""
+      : "";
     const discountPercent = parseDiscountPercent(offerForm.discount_percent);
     const computedSale = calculateSalePrice(selectedProduct.price_kes, discountPercent);
 
@@ -418,20 +417,20 @@ function OffersPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="offer-product">Product on offer</Label>
-                <Input
+                <select
                   id="offer-product"
-                  list="offer-product-options"
-                  value={offerProductSearch}
+                  value={offerSelectedProductId ?? ""}
                   onChange={(event) => handleOfferProductSelection(event.target.value)}
-                  placeholder="Search products"
-                />
-                <datalist id="offer-product-options">
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors md:text-sm"
+                  required
+                >
+                  <option value="">Select a product…</option>
                   {products.map((product) => (
-                    <option key={product.id} value={product.name}>
-                      {product.name}
+                    <option key={product.id} value={product.id}>
+                      {product.name} — KES {Number(product.price_kes).toLocaleString()}
                     </option>
                   ))}
-                </datalist>
+                </select>
               </div>
             </div>
 
