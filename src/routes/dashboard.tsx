@@ -5,7 +5,7 @@ import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilL
 import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listOffers, removeOffer, upsertOffer } from "../lib/offers.functions";
-import { listProductCategories, listProducts, removeCategory, removeProduct, uploadProductImage, upsertCategory, upsertProduct } from "../lib/shop.functions";
+import { listBrands, listProductCategories, listProducts, removeBrand, removeCategory, removeProduct, uploadProductImage, upsertBrand, upsertCategory, upsertProduct } from "../lib/shop.functions";
 import { formatServiceType, readServices, writeServices, type ServiceItem, type ServiceType } from "../lib/services";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 
@@ -13,6 +13,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 type ProductItem = CatalogProduct;
 
 type CategoryItem = CatalogCategory;
+
+type BrandItem = {
+  id: string;
+  name: string;
+  slug: string | null;
+  description: string | null;
+  logo_url: string | null;
+  is_active: boolean | null;
+};
 
 type OfferItem = {
   id: string;
@@ -49,7 +58,7 @@ type OfferForm = {
 };
 
 type ServiceForm = { name: string; description: string; type: ServiceType };
-type AdminView = "dashboard" | "products" | "categories" | "offers" | "orders";
+type AdminView = "dashboard" | "products" | "categories" | "brands" | "offers" | "orders";
 
 const defaultOrders: OrderItem[] = [
   {
@@ -131,19 +140,23 @@ function DashboardPage() {
   const [activeView, setActiveView] = useState<AdminView>("dashboard");
   const saveProductFn = useServerFn(upsertProduct);
   const saveCategoryFn = useServerFn(upsertCategory);
+  const saveBrandFn = useServerFn(upsertBrand);
   const deleteProductFn = useServerFn(removeProduct);
   const deleteCategoryFn = useServerFn(removeCategory);
+  const deleteBrandFn = useServerFn(removeBrand);
   const saveOfferFn = useServerFn(upsertOffer);
   const deleteOfferFn = useServerFn(removeOffer);
   const uploadImageFn = useServerFn(uploadProductImage);
 
   const [products, setProducts] = useState<ProductItem[]>(() => readCatalogProducts());
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
+  const [brands, setBrands] = useState<BrandItem[]>([]);
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
-  const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [] });
+  const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [], brand_id: null });
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
+  const [brandForm, setBrandForm] = useState({ name: "", description: "", logo_url: "", slug: "", is_active: true });
   const [offerForm, setOfferForm] = useState<OfferForm>({ title: "", description: "", badge: "", discount: "", expires_at: "", image: "" });
   const [offerProductSearch, setOfferProductSearch] = useState("");
   const [offerSelectedProductId, setOfferSelectedProductId] = useState<string | null>(null);
@@ -152,9 +165,11 @@ function DashboardPage() {
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
@@ -162,14 +177,16 @@ function DashboardPage() {
   const [savingOffer, setSavingOffer] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingBrandLogo, setUploadingBrandLogo] = useState(false);
 
   useEffect(() => {
     const loadCatalog = async () => {
       try {
-        const [productRows, categoryRows, offerRows] = await Promise.all([listProducts(), listProductCategories(), listOffers()]);
+        const [productRows, categoryRows, offerRows, brandRows] = await Promise.all([listProducts(), listProductCategories(), listOffers(), listBrands()]);
         setProducts(productRows as ProductItem[]);
         setCategories(categoryRows as CategoryItem[]);
         setOffers(offerRows as OfferItem[]);
+        setBrands(brandRows as BrandItem[]);
       } catch (error) {
         console.error("Failed to load catalog", error);
       }
@@ -379,7 +396,7 @@ function DashboardPage() {
 
 
   function resetProductForm() {
-    setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [] });
+    setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [], brand_id: null });
     setEditingProductId(null);
     setProductDialogOpen(false);
   }
@@ -396,10 +413,11 @@ function DashboardPage() {
         requires_prescription: product.requires_prescription,
         in_stock: product.in_stock,
         image_urls: product.image_urls ?? [],
+        brand_id: product.brand_id ?? null,
       });
     } else {
       setEditingProductId(null);
-      setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [] });
+      setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [], brand_id: null });
     }
     setProductDialogOpen(true);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -445,6 +463,7 @@ function DashboardPage() {
           requires_prescription: productForm.requires_prescription,
           in_stock: productForm.in_stock,
           image_urls: imageUrls.length ? imageUrls : null,
+          brand_id: productForm.brand_id ?? null,
         },
       })) as unknown as ProductItem;
 
@@ -522,6 +541,100 @@ function DashboardPage() {
       toast.error(`Could not upload image: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setUploadingImage(false);
+    }
+  }
+
+  async function handleBrandLogoChange(files: FileList | File | null | undefined) {
+    const fileList = files instanceof File ? [files] : files;
+    if (!fileList?.length) return;
+    const file = fileList[0];
+    setUploadingBrandLogo(true);
+    try {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
+        reader.readAsDataURL(file);
+      });
+      const uploaded = (await uploadImageFn({ data: { data_url: dataUrl, filename: file.name } })) as { url?: string } | null;
+      if (uploaded?.url) {
+        setBrandForm((prev) => ({ ...prev, logo_url: uploaded.url ?? prev.logo_url }));
+        toast.success("Brand logo uploaded.");
+      }
+    } catch (error) {
+      toast.error(`Could not upload brand logo: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setUploadingBrandLogo(false);
+    }
+  }
+
+  function resetBrandForm() {
+    setBrandForm({ name: "", description: "", logo_url: "", slug: "", is_active: true });
+    setEditingBrandId(null);
+    setBrandDialogOpen(false);
+  }
+
+  function openBrandDialog(brand?: BrandItem) {
+    if (brand) {
+      setEditingBrandId(brand.id);
+      setBrandForm({
+        name: brand.name,
+        description: brand.description ?? "",
+        logo_url: brand.logo_url ?? "",
+        slug: brand.slug ?? "",
+        is_active: brand.is_active ?? true,
+      });
+    } else {
+      setEditingBrandId(null);
+      setBrandForm({ name: "", description: "", logo_url: "", slug: "", is_active: true });
+    }
+    setBrandDialogOpen(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleSaveBrand(e: React.FormEvent) {
+    e.preventDefault();
+    if (!brandForm.name.trim()) {
+      toast.error("Please enter a brand name.");
+      return;
+    }
+
+    try {
+      const savedBrand = (await saveBrandFn({
+        data: {
+          id: editingBrandId ?? undefined,
+          name: brandForm.name.trim(),
+          slug: brandForm.slug.trim() || undefined,
+          description: brandForm.description.trim(),
+          logo_url: brandForm.logo_url.trim() || null,
+          is_active: brandForm.is_active,
+        },
+      })) as unknown as BrandItem;
+
+      setBrands((prev) => {
+        if (editingBrandId) {
+          return prev.map((brand) => (brand.id === editingBrandId ? savedBrand : brand));
+        }
+        return [savedBrand, ...prev];
+      });
+      resetBrandForm();
+      toast.success(editingBrandId ? "Brand updated." : "Brand created.");
+    } catch (error) {
+      console.error("Failed to save brand", error);
+      toast.error("Could not save brand.");
+    }
+  }
+
+  async function handleDeleteBrand(id: string) {
+    if (!window.confirm("Delete this brand? Products using it will lose their brand association.")) return;
+    try {
+      await deleteBrandFn({ data: { id } });
+      setBrands((prev) => prev.filter((brand) => brand.id !== id));
+      setProducts((prev) => prev.map((product) => (product.brand_id === id ? { ...product, brand_id: null } : product)));
+      toast.success("Brand deleted.");
+    } catch (error) {
+      console.error("Failed to delete brand", error);
+      toast.error("Could not delete brand.");
     }
   }
 
@@ -661,6 +774,9 @@ function DashboardPage() {
                 <button onClick={() => setActiveView("categories")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "categories" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <Tags className="h-4 w-4" /> Categories
                 </button>
+                <button onClick={() => setActiveView("brands")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "brands" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <ImageIcon className="h-4 w-4" /> Brands
+                </button>
                 <button onClick={() => setActiveView("offers")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "offers" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <Gift className="h-4 w-4" /> Offers
                 </button>
@@ -739,6 +855,7 @@ function DashboardPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-semibold">{product.name}</h3>
                               <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">{product.category}</span>
+                              {product.brand_id ? <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">{brands.find((brand) => brand.id === product.brand_id)?.name ?? "Brand"}</span> : null}
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">{product.description}</p>
                             <p className="mt-2 text-sm text-muted-foreground">{formatCurrency(product.price_kes)} · {product.unit} · {product.in_stock ? "In stock" : "Out of stock"} · {product.requires_prescription ? "Rx" : "OTC"}</p>
@@ -781,6 +898,13 @@ function DashboardPage() {
                           <label className="text-sm font-medium">
                             Price (KES)
                             <input type="number" value={productForm.price_kes} onChange={(e) => setProductForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required min="0" />
+                          </label>
+                          <label className="text-sm font-medium">
+                            Brand
+                            <select value={productForm.brand_id ?? ""} onChange={(e) => setProductForm((prev) => ({ ...prev, brand_id: e.target.value || null }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3">
+                              <option value="">No brand</option>
+                              {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+                            </select>
                           </label>
                           <label className="text-sm font-medium">
                             Unit
@@ -903,6 +1027,55 @@ function DashboardPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            ) : null}
+
+            {activeView === "brands" ? (
+              <div id="brands" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary">
+                      <ImageIcon className="h-5 w-5" />
+                      <h2 className="font-display text-2xl font-semibold">Brands</h2>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">Upload brand logos and link them to products.</p>
+                  </div>
+                  <button onClick={() => openBrandDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+                    <Plus className="h-4 w-4" /> New brand
+                  </button>
+                </div>
+
+                <div className="mt-6 grid gap-3 md:grid-cols-2">
+                  {brands.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground md:col-span-2">
+                      No brands added yet.
+                    </div>
+                  ) : (
+                    brands.map((brand) => (
+                      <div key={brand.id} className="rounded-2xl border border-border bg-background px-4 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-border bg-white">
+                              {brand.logo_url ? <img src={brand.logo_url} alt={brand.name} className="h-full w-full object-contain" /> : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold">{brand.name}</h3>
+                              <p className="mt-1 text-sm text-muted-foreground">{brand.description || "No description yet."}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => openBrandDialog(brand)} className="rounded-full border border-border p-2 hover:border-primary hover:text-primary">
+                              <PencilLine className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handleDeleteBrand(brand.id)} disabled={deletingId === brand.id} className="rounded-full border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                              {deletingId === brand.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             ) : null}
@@ -1065,6 +1238,50 @@ function DashboardPage() {
               <button type="button" onClick={() => (setOfferDialogOpen(false), resetOfferForm())} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
               <button type="submit" form="offer-form" disabled={savingOffer} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
                 {savingOffer ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingOfferId ? "Save offer" : "Create offer"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={brandDialogOpen} onOpenChange={(open) => (open ? setBrandDialogOpen(true) : resetBrandForm())}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editingBrandId ? "Edit brand" : "New brand"}</DialogTitle>
+              <DialogDescription>Save a brand logo and description for the navbar dropdown.</DialogDescription>
+            </DialogHeader>
+            <form id="brand-form" onSubmit={handleSaveBrand} className="mt-4 space-y-4">
+              <label className="block text-sm font-medium">
+                Brand name
+                <input value={brandForm.name} onChange={(e) => setBrandForm((prev) => ({ ...prev, name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium">
+                  Slug
+                  <input value={brandForm.slug} onChange={(e) => setBrandForm((prev) => ({ ...prev, slug: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" placeholder="optional" />
+                </label>
+                <label className="flex items-center gap-3 text-sm font-medium">
+                  <input type="checkbox" checked={brandForm.is_active} onChange={(e) => setBrandForm((prev) => ({ ...prev, is_active: e.target.checked }))} />
+                  Show on navbar
+                </label>
+              </div>
+              <label className="block text-sm font-medium">
+                Description
+                <textarea value={brandForm.description} onChange={(e) => setBrandForm((prev) => ({ ...prev, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+              </label>
+              <label className="block text-sm font-medium">
+                Brand logo
+                <input type="file" accept="image/*" disabled={uploadingBrandLogo} onChange={(event) => { handleBrandLogoChange(event.target.files); event.target.value = ""; }} className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3" />
+              </label>
+              {brandForm.logo_url ? (
+                <div className="overflow-hidden rounded-2xl border border-border">
+                  <img src={brandForm.logo_url} alt="Brand preview" className="h-40 w-full object-contain bg-white" />
+                </div>
+              ) : null}
+            </form>
+            <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={resetBrandForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+              <button type="submit" form="brand-form" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                {editingBrandId ? "Save brand" : "Create brand"}
               </button>
             </DialogFooter>
           </DialogContent>

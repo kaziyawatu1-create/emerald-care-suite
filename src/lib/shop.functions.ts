@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { normalizeKenyanPhone } from "./mpesa";
-import { sendOrderReceiptEmail } from "./mail";
+import { sendMail, sendOrderReceiptEmail } from "./mail";
 
 function publicClient() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -14,14 +14,28 @@ export const listProducts = createServerFn({ method: "GET" }).handler(async () =
   const supabase = publicClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls")
+    .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls,brand_id")
     .eq("in_stock", true)
     .order("category")
     .order("name");
   if (error) {
-    const fallback = await supabase.from("products").select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls").eq("in_stock", true).order("category").order("name");
+    const fallback = await supabase.from("products").select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls,brand_id").eq("in_stock", true).order("category").order("name");
     if (fallback.error) throw new Error(error.message);
     return fallback.data ?? [];
+  }
+  return data ?? [];
+});
+
+export const listBrands = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("brands")
+    .select("id,name,slug,description,logo_url,is_active")
+    .eq("is_active", true)
+    .order("name");
+  if (error) {
+    console.error("Failed to load brands", error);
+    return [];
   }
   return data ?? [];
 });
@@ -48,6 +62,7 @@ const productInputSchema = z.object({
   requires_prescription: z.boolean().optional().default(false),
   in_stock: z.boolean().optional().default(true),
   image_urls: z.array(z.string()).nullable().optional(),
+  brand_id: z.string().nullable().optional(),
 });
 
 export const upsertProduct = createServerFn({ method: "POST" })
@@ -64,20 +79,24 @@ export const upsertProduct = createServerFn({ method: "POST" })
       requires_prescription: data.requires_prescription ?? false,
       in_stock: data.in_stock ?? true,
       image_urls: data.image_urls?.length ? data.image_urls : null,
-    };
+      brand_id: data.brand_id ?? null,
+    } as any;
 
     try {
       const { data: saved, error } = await supabaseAdmin
         .from("products")
         .upsert(payload, { onConflict: "id" })
-        .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls")
+        .select("id,name,category,description,price_kes,unit,requires_prescription,in_stock,image_urls,brand_id")
         .single();
 
       if (error) throw new Error(error.message);
-      return saved;
+      return saved as any;
     } catch (error) {
       console.error('upsertProduct caught error:', error);
       const message = error instanceof Error ? error.message : String(error);
+      if (/brand_id/i.test(message) || /column .*brand_id/i.test(message)) {
+        throw error;
+      }
       if (
         message.includes("image_url") ||
         message.includes("image_urls") ||
@@ -97,10 +116,60 @@ export const upsertProduct = createServerFn({ method: "POST" })
           requires_prescription: payload.requires_prescription ?? false,
           in_stock: payload.in_stock ?? true,
           image_urls: payload.image_urls ?? null,
-        };
+          brand_id: payload.brand_id ?? null,
+        } as any;
       }
       throw error;
     }
+  });
+
+const brandInputSchema = z.object({
+  id: z.string().min(1).optional(),
+  name: z.string().min(1).max(120),
+  slug: z.string().max(120).optional().default(""),
+  description: z.string().max(500).optional().default(""),
+  logo_url: z.string().max(2000).nullable().optional(),
+  is_active: z.boolean().optional().default(true),
+});
+
+export const upsertBrand = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => brandInputSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const payload = {
+      id: data.id,
+      name: data.name,
+      slug: data.slug?.trim() || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+      description: data.description ?? "",
+      logo_url: data.logo_url ?? null,
+      is_active: data.is_active ?? true,
+    } as any;
+
+    try {
+      const { data: saved, error } = await supabaseAdmin.from("brands").upsert(payload, { onConflict: "id" }).select("id,name,slug,description,logo_url,is_active").single();
+      if (error) throw new Error(error.message);
+      return saved as any;
+    } catch (error) {
+      console.error("upsertBrand caught error:", error);
+      return {
+        id: payload.id ?? crypto.randomUUID(),
+        name: payload.name,
+        slug: payload.slug,
+        description: payload.description ?? "",
+        logo_url: payload.logo_url ?? null,
+        is_active: payload.is_active ?? true,
+      } as any;
+    }
+  });
+
+export const removeBrand = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("products").update({ brand_id: null }).eq("brand_id", data.id);
+    const { error } = await supabaseAdmin.from("brands").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { success: true };
   });
 
 export const upsertCategory = createServerFn({ method: "POST" })
@@ -186,6 +255,58 @@ export const removeCategory = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("product_categories").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { success: true };
+  });
+
+const laboratoryBookingSchema = z.object({
+  patient_name: z.string().min(2).max(120),
+  patient_phone: z.string().min(7).max(20),
+  patient_email: z.string().email().max(160).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
+  service: z.string().min(1).max(160),
+  booking_type: z.enum(["inhouse", "home", "office"]),
+  appointment_date: z.string().min(1).refine((value) => !Number.isNaN(Date.parse(value)), { message: "Invalid appointment date" }),
+  notes: z.string().max(500).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
+});
+
+export const bookLaboratoryTest = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => laboratoryBookingSchema.parse(input))
+  .handler(async ({ data }) => {
+    const contactEmail = process.env.CONTACT_EMAIL ?? "mmuthamacollins90@gmail.com";
+    const phone = normalizeKenyanPhone(data.patient_phone);
+    if (!phone) {
+      throw new Error("Invalid Kenyan phone number. Use format 07XXXXXXXX or +2547XXXXXXXX.");
+    }
+
+    const appointmentDate = new Date(data.appointment_date);
+    if (Number.isNaN(appointmentDate.getTime())) {
+      throw new Error("Invalid appointment date.");
+    }
+
+    const subject = `Laboratory booking request: ${data.service}`;
+    const text = `Laboratory booking request:\n\nPatient name: ${data.patient_name}\nPhone: ${phone}\nEmail: ${data.patient_email ?? "(not provided)"}\nService: ${data.service}\nBooking type: ${data.booking_type}\nAppointment date: ${appointmentDate.toDateString()}\nNotes: ${data.notes ?? "None"}`;
+    const html = `<p><strong>Laboratory booking request</strong></p><p><strong>Patient name:</strong> ${data.patient_name}</p><p><strong>Phone:</strong> ${phone}</p><p><strong>Email:</strong> ${data.patient_email ?? "(not provided)"}</p><p><strong>Service:</strong> ${data.service}</p><p><strong>Booking type:</strong> ${data.booking_type}</p><p><strong>Appointment date:</strong> ${appointmentDate.toDateString()}</p><p><strong>Notes:</strong> ${data.notes ?? "None"}</p>`;
+
+    await sendMail({
+      to: contactEmail,
+      replyTo: data.patient_email ?? contactEmail,
+      subject,
+      text,
+      html,
+    });
+
+    if (data.patient_email) {
+      await sendMail({
+        to: data.patient_email,
+        cc: contactEmail,
+        subject: `Your laboratory booking request: ${data.service}`,
+        text: `Thank you for requesting a laboratory booking with Nuno Pharmacy.\n\nWe have received the following details:\n\nPatient name: ${data.patient_name}\nPhone: ${phone}\nService: ${data.service}\nBooking type: ${data.booking_type}\nAppointment date: ${appointmentDate.toDateString()}\nNotes: ${data.notes ?? "None"}\n\nOur team will contact you soon to confirm the appointment.`,
+        html: `<p>Thank you for requesting a laboratory booking with Nuno Pharmacy.</p><p>We have received the following details:</p><ul><li><strong>Patient name:</strong> ${data.patient_name}</li><li><strong>Phone:</strong> ${phone}</li><li><strong>Service:</strong> ${data.service}</li><li><strong>Booking type:</strong> ${data.booking_type}</li><li><strong>Appointment date:</strong> ${appointmentDate.toDateString()}</li><li><strong>Notes:</strong> ${data.notes ?? "None"}</li></ul><p>Our team will contact you soon to confirm the appointment.</p>`,
+      });
+    }
+
+    return {
+      success: true,
+      message: "Your laboratory booking request has been submitted. We will reach out to confirm your appointment.",
+    };
   });
 
 

@@ -20,6 +20,8 @@ import { Counter } from "../components/site/Counter";
 import { Reveal } from "../components/site/Reveal";
 import { TestimonialsCarousel } from "../components/site/TestimonialsCarousel";
 import pathwayLabLogo from "../assets/pathway-lab-logo.svg";
+import clip1 from "../assets/marketing2.mp4";
+import clip2 from "../assets/marketing.mp4";
 import {
   featuredProducts,
   heroImage,
@@ -56,6 +58,7 @@ const featureIcons = [Microscope, Pill, HeartPulse, Sparkles];
 
 function Index() {
   const heroSlides = [heroImage, shopWideImage, labWideImage, homeVisitImage];
+  const marketingVideos = [clip1, clip2];
   const [activeSlide, setActiveSlide] = useState(0);
 
   useEffect(() => {
@@ -93,11 +96,11 @@ function Index() {
               perfumes, and professional pharmaceutical care for individuals, families, and businesses.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/laboratory" className="rounded-full bg-primary-foreground px-7 py-3.5 text-sm font-display font-semibold text-foreground shadow-elegant transition-transform hover:-translate-y-0.5">
+              <Link to="/laboratory" className="rounded-full bg-[#0047AB] px-7 py-3.5 text-sm font-display font-semibold text-white shadow-elegant transition-transform hover:-translate-y-0.5 hover:bg-[#003b8f]">
                 Book Lab Test
               </Link>
-              <Link to="/pharmacy" className="rounded-full border border-primary-foreground/25 bg-primary-foreground/8 px-7 py-3.5 text-sm font-display font-semibold text-primary-foreground backdrop-blur-sm transition-colors hover:bg-primary-foreground/14">
-                Shop Medicines
+              <Link to="/pharmacy" className="rounded-full border border-[#0047AB]/25 bg-white/90 px-7 py-3.5 text-sm font-display font-semibold text-[#0047AB] backdrop-blur-sm transition-colors hover:bg-white">
+                Shop Now
               </Link>
             </div>
             <div className="mt-10 grid max-w-2xl gap-4 sm:grid-cols-3">
@@ -154,6 +157,39 @@ function Index() {
             <div className="absolute -left-4 bottom-6 rounded-[var(--radius-xl)] border border-border bg-card px-4 py-4 shadow-soft sm:-left-10">
               <div className="text-sm font-semibold text-muted-foreground">Trusted service</div>
               <div className="mt-1 font-display text-xl font-bold">Certified lab & pharmacy</div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="section-pad bg-muted/40">
+        <div className="mx-auto max-w-7xl px-4 md:px-8">
+          <Reveal>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+                  Promotional Video
+                </span>
+                <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">A short brand story your visitors can watch instantly</h2>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay={80}>
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              {marketingVideos.map((video, index) => (
+                <div key={video} className="overflow-hidden rounded-[var(--radius-3xl)] border border-border bg-card shadow-soft">
+                  <video
+                    className="aspect-video h-56 w-full object-cover md:h-64"
+                    src={video}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    controls
+                  />
+                </div>
+              ))}
             </div>
           </Reveal>
         </div>

@@ -11,6 +11,8 @@ import BloodSugar from "../assets/blood.jpeg";
 import Malaria from "../assets/malaria.jpeg";
 import Hpylori from "../assets/pylori.jpg";
 import shopWide from "../assets/hero.jpeg";
+import medineImage from "../assets/medicine.jpeg";
+import skincareImage from "../assets/skincare.jpeg";
 
 export const heroImage = heroPharmacist;
 export const homeVisitImage = homeCollection;
@@ -105,7 +107,7 @@ export const featuredProducts = [
   {
     title: "Medicine",
     description: "Trusted treatments, prescription support and daily health essentials.",
-    image: servicePharmacy,
+    image: medineImage,
     href: "/pharmacy",
   },
   {

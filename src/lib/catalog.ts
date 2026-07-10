@@ -8,6 +8,7 @@ export type CatalogProduct = {
   requires_prescription: boolean;
   in_stock: boolean;
   image_urls?: string[] | null;
+  brand_id?: string | null;
 };
 
 export type CatalogCategory = {

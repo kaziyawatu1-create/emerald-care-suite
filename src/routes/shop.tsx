@@ -1,16 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { z } from "zod";
 import { Search, Plus, Check, ShoppingBag, AlertCircle, Eye, ArrowLeft, ArrowRight } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { listProducts } from "../lib/shop.functions";
+import { listBrands, listProducts } from "../lib/shop.functions";
 import { useCart, formatKES } from "../lib/cart";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import productPlaceholder from "../assets/product-placeholder.svg";
 
 export const Route = createFileRoute("/shop")({
+  validateSearch: z.object({ brand: z.string().optional() }),
   head: () => ({
     meta: [
       { title: "Shop Medicine | Nuno Pharmacy" },
@@ -44,9 +46,14 @@ function ShopPage() {
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(() => readCatalogProducts());
   const [catalogCategories, setCatalogCategories] = useState<CatalogCategory[]>(() => readCatalogCategories());
+  const { brand } = Route.useSearch();
   const { data, isLoading, error } = useQuery({
     queryKey: ["products"],
     queryFn: () => listProducts(),
+  });
+  const { data: brands } = useQuery({
+    queryKey: ["brands"],
+    queryFn: () => listBrands(),
   });
   const { add, count } = useCart();
   const [justAdded, setJustAdded] = useState<string | null>(null);
@@ -77,6 +84,13 @@ function ShopPage() {
 
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
   const [activeProductImageIndex, setActiveProductImageIndex] = useState(0);
+  const activeBrandId = useMemo(() => {
+    if (!brand || typeof brand !== "string") return null;
+    const resolved = Array.isArray(brands)
+      ? brands.find((item) => item.slug === brand || item.id === brand)?.id
+      : null;
+    return resolved ?? brand;
+  }, [brand, brands]);
 
   const getProductImages = (product: Product) => {
     const maybeImages = (product as Product & { image_urls?: string[] | null }).image_urls;
@@ -94,10 +108,11 @@ function ShopPage() {
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
       if (activeCat && p.category !== activeCat) return false;
+      if (activeBrandId && p.brand_id !== activeBrandId) return false;
       if (!q) return true;
       return `${p.name} ${p.category} ${p.description}`.toLowerCase().includes(q);
     });
-  }, [products, query, activeCat]);
+  }, [products, query, activeCat, activeBrandId]);
 
   const grouped = useMemo(() => {
     const g: Record<string, Product[]> = {};
@@ -130,7 +145,7 @@ function ShopPage() {
             </Link>
           </div>
 
-          <div className="flex flex-wrap gap-2 mb-8">
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
               onClick={() => setActiveCat(null)}
               className={`rounded-full px-4 py-2 text-sm font-medium border transition ${
@@ -151,6 +166,12 @@ function ShopPage() {
               </button>
             ))}
           </div>
+          {brand ? (
+            <div className="mb-8 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-3 py-2 text-sm text-primary">Filtered by brand: {Array.isArray(brands) ? brands.find((item) => item.id === activeBrandId)?.name ?? brand : brand}</span>
+              <Link to="/shop" className="rounded-full border border-border bg-background px-3 py-2 text-sm text-muted-foreground hover:border-primary">Clear brand filter</Link>
+            </div>
+          ) : null}
 
           {isLoading && products.length === 0 && (
             <div className="mb-14">

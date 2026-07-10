@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type FormEvent } from "react";
+import { Eye, Heart } from "lucide-react";
+import { useCart } from "../lib/cart";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
@@ -9,6 +11,7 @@ import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
+import productPlaceholder from "../assets/product-placeholder.svg";
 import { listOffers, upsertOffer } from "../lib/offers.functions";
 import { listProducts } from "../lib/shop.functions";
 
@@ -21,6 +24,7 @@ type OfferItem = {
   discount_percent?: number | null;
   original_price?: number | null;
   sale_price?: number | null;
+  product_id?: string | null;
   expires_at: string | null;
   image: string | null;
   created_at?: string;
@@ -29,6 +33,7 @@ type OfferItem = {
 type ProductOption = {
   id: string;
   name: string;
+  price_kes: number;
   image_urls?: string[] | null;
 };
 
@@ -102,6 +107,7 @@ function OffersPage() {
   const loadOffersFn = useServerFn(listOffers);
   const loadProductsFn = useServerFn(listProducts);
   const saveOfferFn = useServerFn(upsertOffer);
+  const { add } = useCart();
   const [offers, setOffers] = useState<OfferItem[]>(fallbackOffers);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
@@ -175,6 +181,16 @@ function OffersPage() {
     setOfferSelectedProductId(null);
   }
 
+  function parseDiscountPercent(value: string) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : null;
+  }
+
+  function calculateSalePrice(originalPrice: number | null, discountPercent: number | null) {
+    if (originalPrice == null || discountPercent == null) return null;
+    return Math.max(0, Math.round(originalPrice * (100 - discountPercent) / 100));
+  }
+
   function handleOfferProductSelection(nextValue: string) {
     setOfferProductSearch(nextValue);
 
@@ -192,8 +208,34 @@ function OffersPage() {
     setOfferSelectedProductId(selectedProduct.id);
     setOfferProductSearch(selectedProduct.name);
     const firstImage = Array.isArray(selectedProduct.image_urls) ? selectedProduct.image_urls.find((url): url is string => typeof url === "string" && Boolean(url)) ?? "" : "";
-    setOfferForm((prev) => ({ ...prev, image: firstImage }));
+    const discountPercent = parseDiscountPercent(offerForm.discount_percent);
+    const computedSale = calculateSalePrice(selectedProduct.price_kes, discountPercent);
+
+    setOfferForm((prev) => ({
+      ...prev,
+      image: firstImage,
+      original_price: String(selectedProduct.price_kes),
+      sale_price: computedSale != null ? String(computedSale) : prev.sale_price,
+    }));
   }
+
+  useEffect(() => {
+    const originalPrice = Number(offerForm.original_price);
+    const discountPercent = parseDiscountPercent(offerForm.discount_percent);
+    const badgeKey = offerForm.badge.trim().toLowerCase();
+
+    if (badgeKey === "bogo" && originalPrice > 0) {
+      setOfferForm((prev) => ({ ...prev, sale_price: String(Math.round(originalPrice)) }));
+      return;
+    }
+
+    if (originalPrice > 0 && discountPercent != null) {
+      const computed = calculateSalePrice(originalPrice, discountPercent);
+      if (computed != null) {
+        setOfferForm((prev) => ({ ...prev, sale_price: String(computed) }));
+      }
+    }
+  }, [offerForm.original_price, offerForm.discount_percent, offerForm.badge]);
 
   async function handleSaveOffer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -206,13 +248,28 @@ function OffersPage() {
     const isFlash = badge.toLowerCase() === "flash sale";
     const isBogo = badge.toLowerCase() === "bogo";
 
-    let origPrice = offerForm.original_price.trim() ? Number(offerForm.original_price) : null;
+    const selectedProduct = offerSelectedProductId ? products.find((product) => product.id === offerSelectedProductId) ?? null : null;
+    let origPrice = offerForm.original_price.trim() ? Number(offerForm.original_price) : selectedProduct?.price_kes ?? null;
     let salePrice = offerForm.sale_price.trim() ? Number(offerForm.sale_price) : null;
     let discountPct = offerForm.discount_percent.trim() ? Number(offerForm.discount_percent) : null;
     let discountLabel = offerForm.discount.trim();
     let expiresAt = offerForm.expires_at.trim() || null;
 
-    // Flash Sale rules: needs original + sale price and an expiry date (urgency).
+    if (discountPct == null && discountLabel) {
+      const labelMatch = discountLabel.match(/(\d{1,3})\s*%/);
+      discountPct = labelMatch ? Number(labelMatch[1]) : null;
+    }
+
+    if (isBogo && origPrice != null) {
+      salePrice = origPrice;
+      discountPct = 50;
+      if (!discountLabel) discountLabel = "Buy 1 Get 1 Free";
+    }
+
+    if (!isFlash && !isBogo && salePrice == null && origPrice != null && discountPct != null) {
+      salePrice = calculateSalePrice(origPrice, discountPct);
+    }
+
     if (isFlash) {
       if (!origPrice || !salePrice || salePrice >= origPrice) {
         toast.error("Flash Sale needs an original price and a lower sale price.");
@@ -226,22 +283,6 @@ function OffersPage() {
         discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
       }
       if (!discountLabel) discountLabel = `Flash: ${discountPct}% off`;
-    }
-
-    // BOGO rules: effectively 50% off average; force pricing to reflect "2 for the price of 1".
-    if (isBogo) {
-      if (!origPrice) {
-        toast.error("BOGO needs the single-item original price.");
-        return;
-      }
-      salePrice = origPrice; // pay for 1, get 2
-      discountPct = 50;
-      if (!discountLabel) discountLabel = "Buy 1 Get 1 Free";
-    }
-
-    // Default: derive % from prices when not provided.
-    if (!isFlash && !isBogo && discountPct == null && origPrice && salePrice && origPrice > salePrice) {
-      discountPct = Math.round(((origPrice - salePrice) / origPrice) * 100);
     }
 
     setSavingOffer(true);
@@ -261,6 +302,7 @@ function OffersPage() {
           discount_percent: discountPct,
           original_price: origPrice,
           sale_price: salePrice,
+          product_id: offerSelectedProductId ?? null,
           expires_at: expiresAt,
           image: resolvedImage || null,
         },
@@ -420,7 +462,7 @@ function OffersPage() {
                 />
                 <datalist id="offer-product-options">
                   {products.map((product) => (
-                    <option key={product.id} value={product.id}>
+                    <option key={product.id} value={product.name}>
                       {product.name}
                     </option>
                   ))}
@@ -428,11 +470,9 @@ function OffersPage() {
                 <p className="text-xs text-muted-foreground">The offer card image will use the selected product image.</p>
               </div>
             </div>
-            {offerForm.image ? (
-              <div className="overflow-hidden rounded-2xl border border-border">
-                <img src={offerForm.image} alt="Offer preview" className="h-40 w-full object-cover" />
-              </div>
-            ) : null}
+            <div className="overflow-hidden rounded-2xl border border-border">
+              <img src={offerForm.image || productPlaceholder} alt="Offer preview" className="h-40 w-full object-cover" />
+            </div>
             <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="outline" onClick={() => setOfferDialogOpen(false)}>
                 Cancel
@@ -454,61 +494,82 @@ function OffersPage() {
             const pct = offer.discount_percent ?? (offer.original_price && offer.sale_price && offer.original_price > offer.sale_price
               ? Math.round(((offer.original_price - offer.sale_price) / offer.original_price) * 100)
               : null);
+            const effectiveSalePrice = offer.sale_price ?? (offer.original_price != null && pct != null
+              ? Math.max(0, Math.round(offer.original_price * (100 - pct) / 100))
+              : null);
+            const discountAmount = offer.original_price != null && effectiveSalePrice != null
+              ? Math.max(0, offer.original_price - effectiveSalePrice)
+              : null;
+            const hasPriceComparison = offer.original_price != null && effectiveSalePrice != null && offer.original_price > effectiveSalePrice;
+            const discountBadge = discountAmount != null && discountAmount > 0
+              ? `Save KES ${discountAmount.toLocaleString()}`
+              : pct && pct > 0
+                ? `-${pct}%`
+                : offer.discount ?? null;
             return (
             <Reveal key={offer.id} delay={index * 60}>
-              <article className={`relative overflow-hidden rounded-2xl border bg-card shadow-soft card-lift ${isFlash ? "border-red-500 ring-1 ring-red-500/30" : "border-border"}`}>
-                {/* Discount % badge - top right corner */}
-                {pct && pct > 0 ? (
-                  <div className="absolute right-3 top-3 z-10 flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-lg ring-4 ring-white">
-                    <div className="text-center leading-none">
-                      <div className="text-lg font-bold">-{pct}%</div>
+              <article className={`group overflow-hidden rounded-[1.75rem] border border-border bg-card shadow-soft card-lift transition hover:-translate-y-1 hover:shadow-xl ${isFlash ? "border-red-500 ring-1 ring-red-500/30" : ""}`}>
+                <div className="relative overflow-hidden">
+                  <img src={offer.image || productPlaceholder} alt={offer.title} className="h-64 w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <div className="absolute inset-x-0 top-4 flex items-start justify-between px-4">
+                    <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] ${badgeClasses(offer.badge)}`}>
+                      {offer.badge ?? "Offer"}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button type="button" aria-label="View offer" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-sm transition hover:bg-white">
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button type="button" aria-label="Save offer" className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-sm transition hover:bg-white">
+                        <Heart className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                ) : null}
-
-                {offer.image ? (
-                  <img src={offer.image} alt={offer.title} className="h-48 w-full object-cover" />
-                ) : null}
-
-                <div className="p-6">
-                  <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${badgeClasses(offer.badge)}`}>
-                    {isFlash ? "⚡ " : ""}{isBogo ? "🎁 " : ""}{offer.badge ?? "Offer"}
-                  </span>
-                  <h2 className="mt-4 font-display text-2xl font-semibold">{offer.title}</h2>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{offer.description ?? "More details available soon."}</p>
-
-                  {isBogo && offer.original_price ? (
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-1 text-sm font-semibold text-amber-900">
-                        Pay {formatPrice(offer.original_price)}
-                      </span>
-                      <span className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-base font-bold text-white shadow-sm">
-                        Get 2 items
-                      </span>
-                    </div>
-                  ) : (offer.original_price || offer.sale_price) ? (
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      {offer.original_price && offer.sale_price && offer.original_price > offer.sale_price ? (
-                        <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-medium text-red-700 line-through decoration-red-600 decoration-2">
-                          {formatPrice(offer.original_price)}
-                        </span>
-                      ) : null}
-                      {offer.sale_price ? (
-                        <span className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-base font-bold text-white shadow-sm">
-                          {formatPrice(offer.sale_price)}
-                        </span>
-                      ) : offer.original_price ? (
-                        <span className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-base font-bold text-white shadow-sm">
-                          {formatPrice(offer.original_price)}
-                        </span>
-                      ) : null}
+                  {discountBadge ? (
+                    <div className="absolute left-4 bottom-4 rounded-full bg-red-600 px-3 py-2 text-sm font-bold text-white shadow-lg ring-2 ring-white/80">
+                      {discountBadge}
                     </div>
                   ) : null}
+                </div>
 
+                <div className="p-6 sm:p-7">
+                  <h2 className="font-display text-xl font-semibold text-foreground">{offer.title}</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-2">{offer.description ?? "More details available soon."}</p>
 
-                  {offer.discount ? <p className="mt-3 text-sm font-medium text-foreground">{offer.discount}</p> : null}
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    {hasPriceComparison ? (
+                      <>
+                        <span className="text-sm text-muted-foreground line-through">{formatPrice(offer.original_price)}</span>
+                        <span className="text-2xl font-semibold text-foreground">{formatPrice(effectiveSalePrice)}</span>
+                      </>
+                    ) : effectiveSalePrice != null ? (
+                      <span className="text-2xl font-semibold text-foreground">{formatPrice(effectiveSalePrice)}</span>
+                    ) : offer.original_price != null ? (
+                      <span className="text-2xl font-semibold text-foreground">{formatPrice(offer.original_price)}</span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {discountBadge ? <span className="inline-flex rounded-full bg-red-600/10 px-3 py-1 text-sm font-semibold text-red-600">{discountBadge}</span> : null}
+                    {offer.discount ? <p className="text-sm font-medium text-foreground">{offer.discount}</p> : null}
+                  </div>
+
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      onClick={() => add({
+                        id: `offer-${offer.id}`,
+                        name: offer.title,
+                        price: Number(effectiveSalePrice ?? offer.original_price ?? 0),
+                        category: "Offer",
+                      }, 1)}
+                      className="w-full rounded-full btn-gradient px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
+                    >
+                      Add to cart
+                    </button>
+                  </div>
+
                   {offer.expires_at ? (
-                    <p className="mt-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    <p className="mt-4 text-xs uppercase tracking-[0.25em] text-muted-foreground">
                       {(() => {
                         const target = new Date(offer.expires_at);
                         if (Number.isNaN(target.getTime())) return `Ends ${offer.expires_at}`;

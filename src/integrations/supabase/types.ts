@@ -246,8 +246,39 @@ export type Database = {
         }
         Relationships: []
       }
+      brands: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          slug: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          slug?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          slug?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
+          brand_id: string | null
           category: string
           created_at: string
           description: string
@@ -260,6 +291,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          brand_id?: string | null
           category: string
           created_at?: string
           description: string
@@ -272,6 +304,7 @@ export type Database = {
           unit?: string
         }
         Update: {
+          brand_id?: string | null
           category?: string
           created_at?: string
           description?: string
@@ -283,7 +316,15 @@ export type Database = {
           requires_prescription?: boolean
           unit?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
