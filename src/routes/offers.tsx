@@ -417,20 +417,20 @@ function OffersPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="offer-product">Product on offer</Label>
-                <Input
+                <select
                   id="offer-product"
-                  list="offer-product-options"
-                  value={offerProductSearch}
+                  value={offerSelectedProductId ?? ""}
                   onChange={(event) => handleOfferProductSelection(event.target.value)}
-                  placeholder="Search products"
-                />
-                <datalist id="offer-product-options">
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors md:text-sm"
+                  required
+                >
+                  <option value="">Select a product…</option>
                   {products.map((product) => (
-                    <option key={product.id} value={product.name}>
-                      {product.name}
+                    <option key={product.id} value={product.id}>
+                      {product.name} — KES {Number(product.price_kes).toLocaleString()}
                     </option>
                   ))}
-                </datalist>
+                </select>
               </div>
             </div>
 
