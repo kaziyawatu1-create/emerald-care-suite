@@ -61,8 +61,8 @@ export function Navbar() {
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
-            <a href="tel:+254700000000" className="inline-flex items-center gap-1.5 hover:opacity-90">
-              <Phone className="h-3.5 w-3.5" /> +254 700 000 000
+            <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
+              <Phone className="h-3.5 w-3.5" /> +254 703 244 711
             </a>
             <a href="mailto:hello@nuno.co.ke" className="inline-flex items-center gap-1.5 hover:opacity-90">
               <Mail className="h-3.5 w-3.5" /> hello@nuno.co.ke
