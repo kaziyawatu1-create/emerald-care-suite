@@ -67,8 +67,8 @@ export function Navbar() {
              <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
               <Headset className="h-3.5 w-3.5" /> 0111121500
             </a>|
-            <a href="mailto:hello@nuno.co.ke" className="inline-flex items-center gap-1.5 hover:opacity-90">
-              <Mail className="h-3.5 w-3.5" /> hello@nuno.co.ke
+            <a href="mailto:nunopharmacy@gmail.com" className="inline-flex items-center gap-1.5 hover:opacity-90">
+              <Mail className="h-3.5 w-3.5" /> nunopharmacy@gmail.com
             </a>
           </div>
         </div>
