@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { ChevronDown, Gift, Info, Mail, Menu, Phone, ShoppingBag, Sparkles, UserRound, X } from "lucide-react";
+import { ChevronDown, Gift, Info, Mail, Menu, Phone, ShoppingBag, Sparkles, UserRound, X,Headset } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { listBrands } from "@/lib/shop.functions";
 import logoImage from "@/assets/LOGO.jpg";
@@ -63,7 +63,10 @@ export function Navbar() {
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
               <Phone className="h-3.5 w-3.5" /> +254 703 244 711
-            </a>
+            </a>|
+             <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
+              <Headset className="h-3.5 w-3.5" /> 0111121500
+            </a>|
             <a href="mailto:hello@nuno.co.ke" className="inline-flex items-center gap-1.5 hover:opacity-90">
               <Mail className="h-3.5 w-3.5" /> hello@nuno.co.ke
             </a>
