@@ -38,6 +38,7 @@ function ServicesPage() {
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [bookingStep, setBookingStep] = useState(1);
   const [bookingStatus, setBookingStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({ type: "idle", message: "" });
   const [bookingForm, setBookingForm] = useState<BookingForm>({
     service: "",
@@ -78,8 +79,31 @@ function ServicesPage() {
     return "default";
   };
 
+  const bookingSteps = [
+    { label: "Contact details", description: "Tell us who the booking is for." },
+    { label: "Appointment", description: "Choose a date, time, and add notes." },
+    { label: "Review", description: "Confirm your booking before submitting." },
+  ];
+
+  const isContactStepValid = bookingForm.customer_name.trim() !== "" && bookingForm.customer_phone.trim() !== "" && bookingForm.date_of_birth !== "";
+  const isAppointmentStepValid = bookingForm.appointment_date !== "" && bookingForm.appointment_time !== "";
+  const isCurrentStepValid = bookingStep === 1 ? isContactStepValid : bookingStep === 2 ? isAppointmentStepValid : true;
+
+  const goToNextStep = () => {
+    if (bookingStep < bookingSteps.length) {
+      setBookingStep((current) => current + 1);
+    }
+  };
+
+  const goToPreviousStep = () => {
+    if (bookingStep > 1) {
+      setBookingStep((current) => current - 1);
+    }
+  };
+
   const openBookingDialog = (serviceName: string) => {
     setBookingForm((prev) => ({ ...prev, service: serviceName }));
+    setBookingStep(1);
     setBookingStatus({ type: "idle", message: "" });
     setBookingDialogOpen(true);
   };
@@ -95,6 +119,7 @@ function ServicesPage() {
       appointment_time: "",
       notes: "",
     });
+    setBookingStep(1);
     setBookingStatus({ type: "idle", message: "" });
     setBookingDialogOpen(false);
   };
@@ -102,6 +127,11 @@ function ServicesPage() {
   const handleSubmitBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBookingStatus({ type: "idle", message: "" });
+
+    if (bookingStep < bookingSteps.length) {
+      goToNextStep();
+      return;
+    }
 
     try {
       const booking = await bookServiceFn({ data: bookingForm });
@@ -216,52 +246,126 @@ function ServicesPage() {
             <DialogTitle>Book a service</DialogTitle>
             <DialogDescription>Enter your appointment details and request a booking for this service.</DialogDescription>
           </DialogHeader>
-          <form id="booking-form" onSubmit={handleSubmitBooking} className="mt-4 space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-medium">
-                Service
-                <input value={bookingForm.service} readOnly className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-              </label>
-              <label className="block text-sm font-medium">
-                Customer name
-                <input value={bookingForm.customer_name} onChange={(e) => setBookingForm((prev) => ({ ...prev, customer_name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <label className="block text-sm font-medium">
-                Phone
-                <input value={bookingForm.customer_phone} onChange={(e) => setBookingForm((prev) => ({ ...prev, customer_phone: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <label className="block text-sm font-medium">
-                Email
-                <input type="email" value={bookingForm.customer_email} onChange={(e) => setBookingForm((prev) => ({ ...prev, customer_email: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-              </label>
+          <div className="mt-4 rounded-3xl border border-border bg-muted/40 p-4">
+            <div className="grid grid-cols-3 gap-3 text-sm">
+              {bookingSteps.map((step, index) => {
+                const stepIndex = index + 1;
+                const active = bookingStep === stepIndex;
+                return (
+                  <div key={step.label} className={`rounded-2xl border p-3 transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"}`}>
+                    <div className="text-xs font-semibold uppercase tracking-[0.25em]">Step {stepIndex}</div>
+                    <div className="mt-2 font-medium">{step.label}</div>
+                    <p className="mt-1 text-xs leading-snug">{step.description}</p>
+                  </div>
+                );
+              })}
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <label className="block text-sm font-medium">
-                Date of birth
-                <input type="date" value={bookingForm.date_of_birth} onChange={(e) => setBookingForm((prev) => ({ ...prev, date_of_birth: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-              </label>
-              <div className="grid gap-4 sm:grid-cols-2">
+          </div>
+          <form id="booking-form" onSubmit={handleSubmitBooking} className="mt-4 space-y-4">
+            {bookingStep === 1 ? (
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-medium">
+                    Service
+                    <input value={bookingForm.service} readOnly className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Date of birth
+                    <input type="date" value={bookingForm.date_of_birth} onChange={(e) => setBookingForm((prev) => ({ ...prev, date_of_birth: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-medium">
+                    Customer name
+                    <input value={bookingForm.customer_name} onChange={(e) => setBookingForm((prev) => ({ ...prev, customer_name: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Phone
+                    <input value={bookingForm.customer_phone} onChange={(e) => setBookingForm((prev) => ({ ...prev, customer_phone: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                </div>
                 <label className="block text-sm font-medium">
-                  Appointment date
-                  <input type="date" value={bookingForm.appointment_date} onChange={(e) => setBookingForm((prev) => ({ ...prev, appointment_date: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
-                </label>
-                <label className="block text-sm font-medium">
-                  Appointment time
-                  <input type="time" value={bookingForm.appointment_time} onChange={(e) => setBookingForm((prev) => ({ ...prev, appointment_time: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  Email
+                  <input type="email" value={bookingForm.customer_email} onChange={(e) => setBookingForm((prev) => ({ ...prev, customer_email: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" />
                 </label>
               </div>
-            </div>
-            <label className="block text-sm font-medium">
-              Notes
-              <textarea value={bookingForm.notes} onChange={(e) => setBookingForm((prev) => ({ ...prev, notes: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
-            </label>
+            ) : bookingStep === 2 ? (
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block text-sm font-medium">
+                    Appointment date
+                    <input type="date" value={bookingForm.appointment_date} onChange={(e) => setBookingForm((prev) => ({ ...prev, appointment_date: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Appointment time
+                    <input type="time" value={bookingForm.appointment_time} onChange={(e) => setBookingForm((prev) => ({ ...prev, appointment_time: e.target.value }))} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                  </label>
+                </div>
+                <label className="block text-sm font-medium">
+                  Notes
+                  <textarea value={bookingForm.notes} onChange={(e) => setBookingForm((prev) => ({ ...prev, notes: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+                </label>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-border bg-background p-4">
+                  <div className="text-sm font-semibold text-foreground">Service</div>
+                  <p className="mt-2 text-sm text-muted-foreground">{bookingForm.service}</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <div className="text-sm font-semibold text-foreground">Customer name</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{bookingForm.customer_name || "Not provided"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <div className="text-sm font-semibold text-foreground">Phone</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{bookingForm.customer_phone || "Not provided"}</p>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <div className="text-sm font-semibold text-foreground">Email</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{bookingForm.customer_email || "Not provided"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <div className="text-sm font-semibold text-foreground">Date of birth</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{bookingForm.date_of_birth || "Not provided"}</p>
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <div className="text-sm font-semibold text-foreground">Appointment date</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{bookingForm.appointment_date || "Not chosen"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <div className="text-sm font-semibold text-foreground">Appointment time</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{bookingForm.appointment_time || "Not chosen"}</p>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-border bg-background p-4">
+                  <div className="text-sm font-semibold text-foreground">Notes</div>
+                  <p className="mt-2 text-sm text-muted-foreground">{bookingForm.notes || "No additional notes"}</p>
+                </div>
+              </div>
+            )}
+
             {bookingStatus.message ? (
               <p className={`text-sm ${bookingStatus.type === "success" ? "text-emerald-700" : "text-destructive"}`}>{bookingStatus.message}</p>
             ) : null}
           </form>
           <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button type="button" onClick={resetBookingForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
-            <button type="submit" form="booking-form" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold">Request booking</button>
+            {bookingStep > 1 ? (
+              <button type="button" onClick={goToPreviousStep} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Back</button>
+            ) : null}
+            <button
+              type="submit"
+              form="booking-form"
+              disabled={!isCurrentStepValid}
+              className={`rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold ${!isCurrentStepValid ? "opacity-60 pointer-events-none" : ""}`}
+            >
+              {bookingStep < bookingSteps.length ? "Continue" : "Submit booking"}
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
