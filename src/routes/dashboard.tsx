@@ -1,12 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon, Gift } from "lucide-react";
+import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon, Gift, CalendarDays, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listOffers, removeOffer, upsertOffer } from "../lib/offers.functions";
+import { listServices, removeService, upsertService } from "../lib/services.functions";
+import { listBookings, updateBooking } from "../lib/bookings.functions";
+import { listPrescriptions } from "../lib/prescriptions.functions";
 import { listBrands, listProductCategories, listProducts, removeBrand, removeCategory, removeProduct, uploadProductImage, upsertBrand, upsertCategory, upsertProduct } from "../lib/shop.functions";
-import { formatServiceType, readServices, writeServices, type ServiceItem, type ServiceType } from "../lib/services";
+import { formatServiceLocation, formatServiceType, readServices, writeServices, type ServiceItem, type ServiceLocation, type ServiceStatus, type ServiceType } from "../lib/services";
+import type { BookingItem, BookingStatus } from "../lib/bookings";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 
 
@@ -29,6 +33,10 @@ type OfferItem = {
   description: string | null;
   badge: string | null;
   discount: string | null;
+  discount_percent?: number | null;
+  original_price?: number | null;
+  sale_price?: number | null;
+  product_id?: string | null;
   expires_at: string | null;
   image: string | null;
   created_at?: string;
@@ -42,6 +50,16 @@ type OrderItem = {
   status: string;
   createdAt: string;
   items: Array<{ name: string; quantity: number; price: number }>;
+};
+
+type PrescriptionItem = {
+  id: string;
+  customer_name: string;
+  customer_phone: string;
+  prescription_url: string;
+  prescription_path?: string | null;
+  uploaded_at: string;
+  created_at?: string | null;
 };
 
 type ProductForm = Omit<ProductItem, "id">;
@@ -59,8 +77,17 @@ type OfferForm = {
   image: string;
 };
 
-type ServiceForm = { name: string; description: string; type: ServiceType };
-type AdminView = "dashboard" | "products" | "categories" | "brands" | "offers" | "orders";
+type ServiceForm = {
+  name: string;
+  description: string;
+  type: ServiceType;
+  location: ServiceLocation;
+  price_kes: number;
+  duration_minutes: number;
+  test_results: string;
+  status: ServiceStatus;
+};
+type AdminView = "dashboard" | "products" | "categories" | "brands" | "offers" | "services" | "bookings" | "orders" | "prescriptions" | "security";
 
 const defaultOrders: OrderItem[] = [
   {
@@ -89,13 +116,19 @@ const defaultOrders: OrderItem[] = [
 const storageKeys = {
   orders: "nuno-dashboard-orders",
   session: "nuno-dashboard-session",
+  password: "nuno-dashboard-admin-password",
 };
 
 function readStorage<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
     const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
+    if (!raw) return fallback;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return raw as unknown as T;
+    }
   } catch {
     return fallback;
   }
@@ -135,11 +168,21 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || "admin@nuno.com";
+  const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || "admin1234";
+  const [storedAdminPassword, setStoredAdminPassword] = useState<string>(adminPassword);
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [activeView, setActiveView] = useState<AdminView>("dashboard");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
+  const [passwordChangeError, setPasswordChangeError] = useState("");
+
   const saveProductFn = useServerFn(upsertProduct);
   const saveCategoryFn = useServerFn(upsertCategory);
   const saveBrandFn = useServerFn(upsertBrand);
@@ -148,6 +191,12 @@ function DashboardPage() {
   const deleteBrandFn = useServerFn(removeBrand);
   const saveOfferFn = useServerFn(upsertOffer);
   const deleteOfferFn = useServerFn(removeOffer);
+  const listServicesFn = useServerFn(listServices);
+  const saveServiceFn = useServerFn(upsertService);
+  const deleteServiceFn = useServerFn(removeService);
+  const listBookingsFn = useServerFn(listBookings);
+  const updateBookingFn = useServerFn(updateBooking);
+  const listPrescriptionsFn = useServerFn(listPrescriptions);
   const uploadImageFn = useServerFn(uploadProductImage);
 
   const [products, setProducts] = useState<ProductItem[]>(() => readCatalogProducts());
@@ -155,6 +204,8 @@ function DashboardPage() {
   const [brands, setBrands] = useState<BrandItem[]>([]);
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
+  const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [prescriptions, setPrescriptions] = useState<PrescriptionItem[]>([]);
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
   const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [], brand_id: null });
   const [categoryForm, setCategoryForm] = useState<CategoryForm>({ name: "", description: "" });
@@ -162,13 +213,32 @@ function DashboardPage() {
   const [offerForm, setOfferForm] = useState<OfferForm>({ title: "", description: "", badge: "", discount: "", original_price: "", sale_price: "", expires_at: "", image: "" });
   const [offerProductSearch, setOfferProductSearch] = useState("");
   const [offerSelectedProductId, setOfferSelectedProductId] = useState<string | null>(null);
-  const [serviceForm, setServiceForm] = useState<ServiceForm>({ name: "", description: "", type: "inhouse" });
+  const [serviceForm, setServiceForm] = useState<ServiceForm>({
+    name: "",
+    description: "",
+    type: "inhouse",
+    location: "lab-only",
+    price_kes: 0,
+    duration_minutes: 30,
+    test_results: "",
+    status: "active",
+  });
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
+  const [editingBooking, setEditingBooking] = useState<BookingItem | null>(null);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [bookingActionLoading, setBookingActionLoading] = useState(false);
+  const [bookingSearch, setBookingSearch] = useState("");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | "all">("all");
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleTime, setRescheduleTime] = useState("");
+  const [bookingNote, setBookingNote] = useState("");
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
@@ -187,7 +257,7 @@ function DashboardPage() {
         const [productRows, categoryRows, offerRows, brandRows] = await Promise.all([listProducts(), listProductCategories(), listOffers(), listBrands()]);
         setProducts(productRows as ProductItem[]);
         setCategories(categoryRows as CategoryItem[]);
-        setOffers(offerRows as OfferItem[]);
+        setOffers(offerRows as unknown as OfferItem[]);
         setBrands(brandRows as BrandItem[]);
       } catch (error) {
         console.error("Failed to load catalog", error);
@@ -196,6 +266,49 @@ function DashboardPage() {
 
     loadCatalog();
   }, []);
+
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const rows = await listServicesFn();
+        if (Array.isArray(rows) && rows.length > 0) {
+          setServices(rows);
+        }
+      } catch (error) {
+        console.error("Failed to load services", error);
+      }
+    };
+    loadServices();
+  }, [listServicesFn]);
+
+  useEffect(() => {
+    const loadBookings = async () => {
+      try {
+        const rows = await listBookingsFn();
+        if (Array.isArray(rows)) {
+          setBookings(rows);
+        }
+      } catch (error) {
+        console.error("Failed to load bookings", error);
+      }
+    };
+    loadBookings();
+  }, [listBookingsFn]);
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const loadPrescriptions = async () => {
+      try {
+        const rows = await listPrescriptionsFn();
+        setPrescriptions(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        console.error("Failed to load prescriptions", error);
+      }
+    };
+
+    loadPrescriptions();
+  }, [isLoggedIn, listPrescriptionsFn]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -221,8 +334,11 @@ function DashboardPage() {
     }
   }, []);
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || "admin@nuno.com";
-  const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || "admin1234";
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedPassword = readStorage<string>(storageKeys.password, adminPassword);
+    setStoredAdminPassword(storedPassword);
+  }, [adminPassword]);
 
   const productCategories = useMemo(() => categories.map((cat) => cat.name), [categories]);
   const stats = useMemo(() => {
@@ -234,9 +350,26 @@ function DashboardPage() {
       { label: "Perfumes", value: perfumeCount, accent: "text-gold" },
       { label: "Skincare", value: skincareCount, accent: "text-primary" },
       { label: "Services", value: services.length, accent: "text-primary" },
+      { label: "Bookings", value: bookings.length, accent: "text-sky" },
+      { label: "Prescriptions", value: prescriptions.length, accent: "text-cyan" },
       { label: "Orders", value: orders.length, accent: "text-foreground" },
     ];
-  }, [products, services.length, orders.length]);
+  }, [products, services.length, bookings.length, orders.length]);
+
+  const filteredBookings = useMemo(() => {
+    const query = bookingSearch.trim().toLowerCase();
+    return bookings.filter((booking) => {
+      const matchesStatus = bookingStatusFilter === "all" || booking.status === bookingStatusFilter;
+      const matchesSearch =
+        !query ||
+        booking.booking_number.toLowerCase().includes(query) ||
+        booking.customer_name.toLowerCase().includes(query) ||
+        booking.customer_phone.toLowerCase().includes(query) ||
+        booking.customer_email?.toLowerCase().includes(query) ||
+        booking.service.toLowerCase().includes(query);
+      return matchesStatus && matchesSearch;
+    });
+  }, [bookings, bookingSearch, bookingStatusFilter]);
 
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -362,7 +495,7 @@ function DashboardPage() {
           expires_at: offerForm.expires_at || "",
           image: resolvedImage,
         },
-      })) as OfferItem;
+      })) as unknown as OfferItem;
 
       setOffers((current) => {
         if (editingOfferId) {
@@ -400,12 +533,12 @@ function DashboardPage() {
     setError("");
     // brief delay for UX feedback
     setTimeout(() => {
-      if (email.trim().toLowerCase() === adminEmail.toLowerCase() && password === adminPassword) {
+      if (email.trim().toLowerCase() === adminEmail.toLowerCase() && password === storedAdminPassword) {
         setIsLoggedIn(true);
         writeStorage(storageKeys.session, { email: email.trim() });
         toast.success("Welcome back, admin!");
       } else {
-        const msg = "Invalid admin credentials. Use the demo login shown on this page.";
+        const msg = "Invalid admin credentials.";
         setError(msg);
         toast.error(msg);
       }
@@ -420,6 +553,47 @@ function DashboardPage() {
     toast.success("Signed out");
   }
 
+  function changeAdminPassword(newPassword: string) {
+    setStoredAdminPassword(newPassword);
+    writeStorage(storageKeys.password, newPassword);
+  }
+
+  function resetAdminPasswordOverride() {
+    setStoredAdminPassword(adminPassword);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(storageKeys.password);
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordChangeError("");
+    setPasswordChangeLoading(true);
+    try {
+      if (currentPassword !== storedAdminPassword) {
+        setPasswordChangeError("Current password is incorrect.");
+        return;
+      }
+      if (!newPassword.trim()) {
+        setPasswordChangeError("Enter a new password.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setPasswordChangeError("New passwords do not match.");
+        return;
+      }
+      changeAdminPassword(newPassword.trim());
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Admin password updated.");
+    } catch (error) {
+      console.error("Failed to update password", error);
+      setPasswordChangeError("Unable to update password right now.");
+    } finally {
+      setPasswordChangeLoading(false);
+    }
+  }
 
   function resetProductForm() {
     setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [], brand_id: null });
@@ -467,6 +641,93 @@ function DashboardPage() {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function resetServiceForm() {
+    setServiceForm({
+      name: "",
+      description: "",
+      type: "inhouse",
+      location: "lab-only",
+      price_kes: 0,
+      duration_minutes: 30,
+      test_results: "",
+      status: "active",
+    });
+    setEditingServiceId(null);
+    setServiceDialogOpen(false);
+  }
+
+  function openServiceDialog(service?: ServiceItem) {
+    if (service) {
+      setEditingServiceId(service.id);
+      setServiceForm({
+        name: service.name,
+        description: service.description,
+        type: service.type,
+        location: service.location,
+        price_kes: service.price_kes,
+        duration_minutes: service.duration_minutes,
+        test_results: service.test_results,
+        status: service.status,
+      });
+    } else {
+      resetServiceForm();
+    }
+    setServiceDialogOpen(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleEditService(service: ServiceItem) {
+    openServiceDialog(service);
+  }
+
+  async function handleDeleteService(id: string) {
+    if (!window.confirm("Delete this service? This action cannot be undone.")) return;
+    try {
+      await deleteServiceFn({ data: { id } });
+      setServices((current) => current.filter((item) => item.id !== id));
+      toast.success("Service deleted.");
+    } catch (error) {
+      console.error("Failed to delete service", error);
+      toast.error("Unable to delete service right now.");
+    }
+  }
+
+  async function handleSaveService(e: React.FormEvent) {
+    e.preventDefault();
+    if (!serviceForm.name.trim()) {
+      toast.error("Please add a service name.");
+      return;
+    }
+
+    try {
+      const savedService = (await saveServiceFn({
+        data: {
+          id: editingServiceId ?? undefined,
+          name: serviceForm.name.trim(),
+          description: serviceForm.description.trim(),
+          type: serviceForm.type,
+          location: serviceForm.location,
+          price_kes: serviceForm.price_kes,
+          duration_minutes: serviceForm.duration_minutes,
+          test_results: serviceForm.test_results.trim(),
+          status: serviceForm.status,
+        },
+      })) as ServiceItem;
+
+      setServices((current) => {
+        if (editingServiceId) {
+          return current.map((item) => (item.id === editingServiceId ? savedService : item));
+        }
+        return [savedService, ...current];
+      });
+
+      toast.success(editingServiceId ? "Service updated." : "Service created.");
+      resetServiceForm();
+    } catch (error) {
+      console.error("Failed to save service", error);
+      toast.error("Unable to save service right now.");
+    }
+  }
 
   async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
@@ -720,6 +981,63 @@ function DashboardPage() {
     }
   }
 
+  function openBookingDialog(booking: BookingItem) {
+    setEditingBooking(booking);
+    setRescheduleDate(booking.appointment_date ?? "");
+    setRescheduleTime(booking.appointment_time ?? "");
+    setBookingNote(booking.notes ?? "");
+    setBookingDialogOpen(true);
+  }
+
+  function closeBookingDialog() {
+    setBookingDialogOpen(false);
+    setEditingBooking(null);
+    setRescheduleDate("");
+    setRescheduleTime("");
+    setBookingNote("");
+  }
+
+  async function updateBookingStatus(bookingId: string, status: BookingStatus, data: { appointment_date?: string; appointment_time?: string; notes?: string } = {}) {
+    setBookingActionLoading(true);
+    try {
+      const updatedBooking = await updateBookingFn({ data: { id: bookingId, status, ...data } });
+      setBookings((prev) => prev.map((item) => (item.id === bookingId ? updatedBooking : item)));
+      toast.success(`Booking ${status === "confirmed" ? "confirmed" : status === "canceled" ? "canceled" : "rescheduled"}`);
+      closeBookingDialog();
+    } catch (error) {
+      console.error("Failed to update booking", error);
+      toast.error(`Could not update booking: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setBookingActionLoading(false);
+    }
+  }
+
+  async function handleConfirmBooking(booking: BookingItem) {
+    await updateBookingStatus(booking.id, "confirmed");
+  }
+
+  async function handleCancelBooking(booking: BookingItem) {
+    if (!window.confirm("Cancel this booking?")) return;
+    await updateBookingStatus(booking.id, "canceled");
+  }
+
+  async function handleSaveReschedule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingBooking) return;
+    if (!rescheduleDate || !rescheduleTime) {
+      toast.error("Please select both date and time.");
+      return;
+    }
+    await updateBookingStatus(editingBooking.id, "rescheduled", {
+      appointment_date: rescheduleDate,
+      appointment_time: rescheduleTime,
+      notes: bookingNote,
+    });
+  }
+
+  function handleOpenReschedule(booking: BookingItem) {
+    openBookingDialog(booking);
+  }
 
   if (!isLoggedIn) {
     return (
@@ -731,11 +1049,6 @@ function DashboardPage() {
             </div>
             <h1 className="mt-5 font-display text-4xl font-bold md:text-5xl">Manage products, categories and orders</h1>
             <p className="mt-4 max-w-xl text-muted-foreground">Sign in to update your shop inventory, organize categories and review incoming orders.</p>
-            <div className="mt-6 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-              <p className="font-semibold text-foreground">Demo login</p>
-              <p>Email: {adminEmail}</p>
-              <p>Password: {adminPassword}</p>
-            </div>
           </div>
 
           <form onSubmit={handleLogin} className="flex-1 rounded-4xl border border-border bg-card p-8 shadow-elegant">
@@ -794,6 +1107,9 @@ function DashboardPage() {
                 <button onClick={() => setActiveView("dashboard")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "dashboard" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <ShieldCheck className="h-4 w-4" /> Overview
                 </button>
+                <button onClick={() => setActiveView("security")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "security" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <ShieldCheck className="h-4 w-4" /> Security
+                </button>
                 <button onClick={() => setActiveView("products")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "products" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <Package className="h-4 w-4" /> Products
                 </button>
@@ -805,6 +1121,15 @@ function DashboardPage() {
                 </button>
                 <button onClick={() => setActiveView("offers")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "offers" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <Gift className="h-4 w-4" /> Offers
+                </button>
+                <button onClick={() => setActiveView("services")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "services" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <Package className="h-4 w-4" /> Services
+                </button>
+                <button onClick={() => setActiveView("bookings")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "bookings" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <CalendarDays className="h-4 w-4" /> Bookings
+                </button>
+                <button onClick={() => setActiveView("prescriptions")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "prescriptions" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <FileText className="h-4 w-4" /> Prescriptions
                 </button>
                 <button onClick={() => setActiveView("orders")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "orders" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <ShoppingCart className="h-4 w-4" /> Orders
@@ -830,6 +1155,72 @@ function DashboardPage() {
                   <p className="mt-2 text-sm text-muted-foreground">Choose an option from the sidebar to manage products, categories, offers, or orders.</p>
                 </div>
               </>
+            ) : null}
+
+            {activeView === "security" ? (
+              <div className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary">
+                      <ShieldCheck className="h-5 w-5" />
+                      <h2 className="font-display text-2xl font-semibold">Security</h2>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">Update the admin password used to sign in to this dashboard.</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="mt-6 space-y-4">
+                  <label className="block text-sm font-medium">
+                    Current password
+                    <input
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      type="password"
+                      required
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none ring-0 focus:border-primary"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    New password
+                    <input
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      type="password"
+                      required
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none ring-0 focus:border-primary"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Confirm new password
+                    <input
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      type="password"
+                      required
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 outline-none ring-0 focus:border-primary"
+                    />
+                  </label>
+                  {passwordChangeError ? (
+                    <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{passwordChangeError}</div>
+                  ) : null}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                      type="submit"
+                      disabled={passwordChangeLoading}
+                      className="inline-flex items-center justify-center gap-2 rounded-full btn-gradient px-6 py-3 text-sm font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      {passwordChangeLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Updating…</> : "Update password"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetAdminPasswordOverride}
+                      className="inline-flex items-center justify-center rounded-full border border-border bg-background px-6 py-3 text-sm font-semibold hover:border-primary hover:text-primary"
+                    >
+                      Reset to default
+                    </button>
+                  </div>
+                </form>
+              </div>
             ) : null}
 
             {activeView === "products" ? (
@@ -1161,6 +1552,225 @@ function DashboardPage() {
               </div>
             ) : null}
 
+            {activeView === "services" ? (
+              <div id="services" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary">
+                      <Package className="h-5 w-5" />
+                      <h2 className="font-display text-2xl font-semibold">Services</h2>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">Add or update service offerings that appear on the services page.</p>
+                  </div>
+                  <button onClick={() => openServiceDialog()} className="inline-flex items-center gap-2 rounded-full btn-gradient px-4 py-2 text-sm font-semibold">
+                    <Plus className="h-4 w-4" /> New service
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+                  Add services from the popup form and manage their status, price, duration, and test results.
+                </div>
+
+                <div className="mt-6 overflow-x-auto">
+                  {services.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
+                      No services added yet.
+                    </div>
+                  ) : (
+                    <table className="min-w-full divide-y divide-border text-sm">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Name</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Type</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Location</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Price</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Duration</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Status</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {services.map((service) => (
+                          <tr key={service.id} className="bg-background">
+                            <td className="px-4 py-3">
+                              <div className="font-semibold">{service.name}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">{service.description}</div>
+                            </td>
+                            <td className="px-4 py-3 uppercase tracking-[0.2em] text-xs text-primary">{formatServiceType(service.type)}</td>
+                            <td className="px-4 py-3 uppercase tracking-[0.2em] text-xs text-primary">{formatServiceLocation(service.location)}</td>
+                            <td className="px-4 py-3">KES {service.price_kes}</td>
+                            <td className="px-4 py-3">{service.duration_minutes} min</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${service.status === "active" ? "bg-emerald-100 text-emerald-700" : service.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>
+                                {service.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-2">
+                                <button onClick={() => openServiceDialog(service)} className="rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
+                                  <PencilLine className="h-4 w-4" /> Edit
+                                </button>
+                                <button onClick={() => handleDeleteService(service.id)} className="rounded-full border border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10">
+                                  <Trash2 className="h-4 w-4" /> Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {activeView === "bookings" ? (
+              <div id="bookings" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary">
+                      <CalendarDays className="h-5 w-5" />
+                      <h2 className="font-display text-2xl font-semibold">Bookings</h2>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">Review and manage appointment bookings from customers.</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_180px]">
+                  <label className="block text-sm font-medium">
+                    Search bookings
+                    <input
+                      value={bookingSearch}
+                      onChange={(e) => setBookingSearch(e.target.value)}
+                      placeholder="Booking number, customer, or service"
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Filter status
+                    <select
+                      value={bookingStatusFilter}
+                      onChange={(e) => setBookingStatusFilter(e.target.value as BookingStatus | "all")}
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="rescheduled">Rescheduled</option>
+                      <option value="canceled">Canceled</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-6 overflow-x-auto">
+                  {filteredBookings.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
+                      No bookings match your search.
+                    </div>
+                  ) : (
+                    <table className="min-w-full divide-y divide-border text-sm">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Booking</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Customer</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Service</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Type</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Appointment</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Status</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {filteredBookings.map((booking) => (
+                          <tr key={booking.id} className="bg-background">
+                            <td className="px-4 py-3">
+                              <div className="font-semibold">{booking.booking_number}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">Created {booking.createdAt?.split("T")[0] ?? "-"}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div>{booking.customer_name}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">{booking.customer_phone} · {booking.customer_email}</div>
+                            </td>
+                            <td className="px-4 py-3">{booking.service}</td>
+                            <td className="px-4 py-3 uppercase tracking-[0.2em] text-xs text-primary">{booking.booking_type}</td>
+                            <td className="px-4 py-3">
+                              <div>{booking.appointment_date}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">{booking.appointment_time}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${booking.status === "confirmed" ? "bg-emerald-100 text-emerald-700" : booking.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>
+                                {booking.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-2">
+                                <button onClick={() => handleConfirmBooking(booking)} disabled={bookingActionLoading || booking.status === "confirmed"} className="rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary disabled:opacity-70 disabled:cursor-not-allowed">
+                                  Confirm
+                                </button>
+                                <button onClick={() => handleOpenReschedule(booking)} className="rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
+                                  Reschedule
+                                </button>
+                                <button onClick={() => handleCancelBooking(booking)} disabled={bookingActionLoading || booking.status === "canceled"} className="rounded-full border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-70 disabled:cursor-not-allowed">
+                                  Cancel
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {activeView === "prescriptions" ? (
+              <div id="prescriptions" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary">
+                      <FileText className="h-5 w-5" />
+                      <h2 className="font-display text-2xl font-semibold">Prescriptions</h2>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">View uploaded prescriptions from customers and open prescription files.</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 overflow-x-auto">
+                  {prescriptions.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
+                      No prescription uploads are available yet.
+                    </div>
+                  ) : (
+                    <table className="min-w-full divide-y divide-border text-sm">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Customer</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Phone</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Uploaded</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">File</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {prescriptions.map((prescription) => (
+                          <tr key={prescription.id} className="bg-background">
+                            <td className="px-4 py-3 font-semibold text-foreground">{prescription.customer_name}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{prescription.customer_phone}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{new Date(prescription.uploaded_at).toLocaleString()}</td>
+                            <td className="px-4 py-3">
+                              <a href={prescription.prescription_url} target="_blank" rel="noreferrer" className="inline-flex rounded-full border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground transition hover:border-primary">
+                                Open file
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
             {activeView === "orders" ? (
               <div id="orders" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
                 <div className="flex items-center gap-2 text-primary">
@@ -1201,6 +1811,114 @@ function DashboardPage() {
       </div>
 
       <>
+        <Dialog open={serviceDialogOpen} onOpenChange={(open) => (open ? setServiceDialogOpen(true) : resetServiceForm())}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editingServiceId ? "Edit service" : "New service"}</DialogTitle>
+              <DialogDescription>Add or update a service offering for the services page.</DialogDescription>
+            </DialogHeader>
+            <form id="service-form" onSubmit={handleSaveService} className="mt-4 space-y-4">
+<div className="grid gap-4 sm:grid-cols-3">
+                  <label className="block text-sm font-medium">
+                    Service name
+                    <input
+                      value={serviceForm.name}
+                      onChange={(e) => setServiceForm((prev) => ({ ...prev, name: e.target.value }))}
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Type
+                    <select
+                      value={serviceForm.type}
+                      onChange={(e) => setServiceForm((prev) => ({ ...prev, type: e.target.value as ServiceType }))}
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    >
+                      <option value="inhouse">In-house</option>
+                      <option value="at-home">At home</option>
+                      <option value="hybrid">Hybrid</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Location
+                    <select
+                      value={serviceForm.location}
+                      onChange={(e) => setServiceForm((prev) => ({ ...prev, location: e.target.value as ServiceLocation }))}
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    >
+                      <option value="lab-only">Lab only</option>
+                      <option value="office">Office visit</option>
+                      <option value="home">Home visit</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="block text-sm font-medium">
+                  Price (KES)
+                  <input
+                    type="number"
+                    min="0"
+                    value={serviceForm.price_kes}
+                    onChange={(e) => setServiceForm((prev) => ({ ...prev, price_kes: Number(e.target.value) }))}
+                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    required
+                  />
+                </label>
+                <label className="block text-sm font-medium">
+                  Duration (minutes)
+                  <input
+                    type="number"
+                    min="1"
+                    value={serviceForm.duration_minutes}
+                    onChange={(e) => setServiceForm((prev) => ({ ...prev, duration_minutes: Number(e.target.value) }))}
+                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    required
+                  />
+                </label>
+                <label className="block text-sm font-medium">
+                  Status
+                  <select
+                    value={serviceForm.status}
+                    onChange={(e) => setServiceForm((prev) => ({ ...prev, status: e.target.value as ServiceStatus }))}
+                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                  >
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="block text-sm font-medium">
+                Description
+                <textarea
+                  value={serviceForm.description}
+                  onChange={(e) => setServiceForm((prev) => ({ ...prev, description: e.target.value }))}
+                  className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                Test results description
+                <textarea
+                  value={serviceForm.test_results}
+                  onChange={(e) => setServiceForm((prev) => ({ ...prev, test_results: e.target.value }))}
+                  className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                  placeholder="Describe how test results are delivered or what customers can expect."
+                />
+              </label>
+            </form>
+            <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={resetServiceForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+              <button type="submit" form="service-form" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold">
+                {editingServiceId ? "Save service" : "Create service"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={offerDialogOpen} onOpenChange={(open) => (open ? setOfferDialogOpen(true) : (setOfferDialogOpen(false), resetOfferForm()))}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -1341,6 +2059,37 @@ function DashboardPage() {
               <button type="button" onClick={resetCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
               <button type="submit" form="category-form" disabled={savingCategory} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
                 {savingCategory ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : editingCategoryId ? "Save category" : "Create category"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={bookingDialogOpen} onOpenChange={(open) => (open ? setBookingDialogOpen(true) : closeBookingDialog())}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Reschedule booking</DialogTitle>
+              <DialogDescription>Update the appointment slot or notes for this booking.</DialogDescription>
+            </DialogHeader>
+            <form id="booking-reschedule-form" onSubmit={handleSaveReschedule} className="mt-4 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium">
+                  Appointment date
+                  <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                </label>
+                <label className="block text-sm font-medium">
+                  Appointment time
+                  <input type="time" value={rescheduleTime} onChange={(e) => setRescheduleTime(e.target.value)} className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3" required />
+                </label>
+              </div>
+              <label className="block text-sm font-medium">
+                Notes
+                <textarea value={bookingNote} onChange={(e) => setBookingNote(e.target.value)} className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3" />
+              </label>
+            </form>
+            <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={closeBookingDialog} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+              <button type="submit" form="booking-reschedule-form" disabled={bookingActionLoading} className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:opacity-60">
+                {bookingActionLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : "Save changes"}
               </button>
             </DialogFooter>
           </DialogContent>

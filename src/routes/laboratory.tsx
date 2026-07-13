@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Check, ArrowRight } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
-import { laboratoryTests } from "../lib/site-data";
-import { bookLaboratoryTest } from "../lib/shop.functions";
+import { createBooking } from "../lib/bookings.functions";
+import { listServices } from "../lib/services.functions";
+import type { ServiceItem } from "../lib/services";
 
 export const Route = createFileRoute("/laboratory")({
   head: () => ({
@@ -20,38 +21,66 @@ export const Route = createFileRoute("/laboratory")({
 });
 
 function LaboratoryPage() {
-  const bookTestFn = useServerFn(bookLaboratoryTest);
+  const loadServicesFn = useServerFn(listServices);
+  const bookTestFn = useServerFn(createBooking);
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [form, setForm] = useState<{
-    patient_name: string;
-    patient_phone: string;
-    patient_email: string;
+    customer_name: string;
+    customer_phone: string;
+    customer_email: string;
     service: string;
-    booking_type: "home" | "inhouse" | "office";
+    booking_type: "lab" | "home" | "office";
+    gender: "male" | "female" | "other";
+    date_of_birth: string;
     appointment_date: string;
+    appointment_time: string;
     notes: string;
   }>({
-    patient_name: "",
-    patient_phone: "",
-    patient_email: "",
-    service: laboratoryTests[0]?.name ?? "",
-    booking_type: "inhouse",
+    customer_name: "",
+    customer_phone: "",
+    customer_email: "",
+    service: "",
+    booking_type: "lab",
+    gender: "male",
+    date_of_birth: "",
     appointment_date: "",
+    appointment_time: "",
     notes: "",
   });
   const [status, setStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({ type: "idle", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    loadServicesFn()
+      .then((rows) => {
+        if (!mounted) return;
+        const nextServices = Array.isArray(rows) ? (rows as ServiceItem[]) : [];
+        setServices(nextServices);
+        if (nextServices.length && !form.service) {
+          setForm((current) => ({ ...current, service: nextServices[0].name }));
+        }
+      })
+      .catch(() => {
+        // ignore failures; the page can still render and show no service options
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadServicesFn, form.service]);
+
+  const laboratoryServices = useMemo(() => services, [services]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus({ type: "idle", message: "" });
     setIsSubmitting(true);
     try {
-      const response = await bookTestFn({ data: form });
-      if (!response || !response.success) {
-        throw new Error(response?.message || "Unable to submit your booking request.");
-      }
-      setStatus({ type: "success", message: response.message });
-      setForm((current) => ({ ...current, patient_name: "", patient_phone: "", patient_email: "", appointment_date: "", notes: "", service: laboratoryTests[0]?.name ?? "", booking_type: "inhouse" }));
+      const booking = await bookTestFn({ data: form });
+      setStatus({ type: "success", message: `Booking request submitted! Your booking number is ${booking.booking_number}.` });
+      setForm((current) => ({ ...current, customer_name: "", customer_phone: "", customer_email: "", date_of_birth: "", appointment_date: "", appointment_time: "", notes: "", service: services[0]?.name ?? "" }));
     } catch (error) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Unable to submit your booking request." });
     } finally {
@@ -73,18 +102,29 @@ function LaboratoryPage() {
 
       <section className="section-pad">
         <div className="mx-auto max-w-7xl px-4 md:px-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          {laboratoryTests.map((test, index) => (
-            <Reveal key={test.name} delay={index * 50}>
-              <article className="overflow-hidden rounded-[var(--radius-2xl)] border border-border bg-card shadow-soft card-lift">
-                <img src={test.image} alt={test.name} className="aspect-[4/3] w-full object-cover" loading="lazy" width={1280} height={960} />
-                <div className="p-6">
-                  <h2 className="font-display text-xl font-semibold">{test.name}</h2>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{test.description}</p>
-                  <a href="#book-test" className="mt-6 inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-display font-semibold">
-                    Book Test
-                    <ArrowRight className="h-4 w-4" />
-                  </a>
+          {laboratoryServices.map((service, index) => (
+            <Reveal key={service.id} delay={index * 50}>
+              <article className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift">
+                <div>
+                  <h2 className="font-display text-xl font-semibold">{service.name}</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
                 </div>
+                <div className="mt-6 grid gap-3 text-sm text-muted-foreground">
+                  <div>
+                    <span className="font-semibold text-foreground">Price:</span> KES {service.price_kes}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-foreground">Duration:</span> {service.duration_minutes} min
+                  </div>
+                </div>
+                <a
+                  href="#book-test"
+                  onClick={() => setForm((current) => ({ ...current, service: service.name }))}
+                  className="mt-6 inline-flex items-center gap-2 rounded-full btn-gradient px-5 py-2.5 text-sm font-display font-semibold"
+                >
+                  Book Test
+                  <ArrowRight className="h-4 w-4" />
+                </a>
               </article>
             </Reveal>
           ))}
@@ -100,20 +140,11 @@ function LaboratoryPage() {
             <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Testing designed for convenience</h2>
           </Reveal>
           <div className="mt-10 grid gap-4 sm:grid-cols-2">
-            {[
-              "Rapid HIV Testing",
-              "Blood Sugar Test",
-              "Malaria Testing",
-              "H. pylori Test",
-              "Blood Grouping",
-              "Home Sample Collection",
-              "Office Sample Collection",
-              "Home Healthcare",
-            ].map((service, index) => (
-              <Reveal key={service} delay={index * 40}>
+            {laboratoryServices.map((service, index) => (
+              <Reveal key={service.id} delay={index * 40}>
                 <div className="flex items-start gap-3 rounded-[var(--radius-xl)] border border-border bg-card px-5 py-4 text-left shadow-soft">
                   <Check className="mt-0.5 h-5 w-5 text-primary" />
-                  <span className="font-medium">{service}</span>
+                  <span className="font-medium">{service.name}</span>
                 </div>
               </Reveal>
             ))}
@@ -136,77 +167,139 @@ function LaboratoryPage() {
               </div>
               <form onSubmit={handleSubmit} className="rounded-[var(--radius-3xl)] border border-border bg-card p-8 shadow-soft">
                 <div className="grid gap-4">
-                  <input
-                    name="patient_name"
-                    value={form.patient_name}
-                    onChange={(event) => setForm((current) => ({ ...current, patient_name: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    placeholder="Patient full name"
-                    aria-label="Patient full name"
-                    required
-                  />
-                  <input
-                    name="patient_phone"
-                    value={form.patient_phone}
-                    onChange={(event) => setForm((current) => ({ ...current, patient_phone: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    placeholder="Phone number"
-                    aria-label="Phone number"
-                    required
-                  />
-                  <input
-                    type="email"
-                    name="patient_email"
-                    value={form.patient_email}
-                    onChange={(event) => setForm((current) => ({ ...current, patient_email: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    placeholder="Email address (optional)"
-                    aria-label="Email address"
-                  />
-                  <select
-                    name="service"
-                    value={form.service}
-                    onChange={(event) => setForm((current) => ({ ...current, service: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    aria-label="Select service"
-                    required
-                  >
-                    {laboratoryTests.map((test) => (
-                      <option key={test.name} value={test.name}>
-                        {test.name}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    name="booking_type"
-                    value={form.booking_type}
-                    onChange={(event) => setForm((current) => ({ ...current, booking_type: event.target.value as "inhouse" | "home" | "office" }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    aria-label="Booking type"
-                    required
-                  >
-                    <option value="inhouse">In-house lab visit</option>
-                    <option value="home">Home sample collection</option>
-                    <option value="office">Office sample collection</option>
-                  </select>
-                  <input
-                    type="date"
-                    name="appointment_date"
-                    value={form.appointment_date}
-                    onChange={(event) => setForm((current) => ({ ...current, appointment_date: event.target.value }))}
-                    className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    aria-label="Preferred appointment date"
-                    min={new Date().toISOString().split("T")[0]}
-                    required
-                  />
-                  <textarea
-                    name="notes"
-                    value={form.notes}
-                    onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                    className="min-h-32 rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
-                    placeholder="Additional notes or instructions"
-                    aria-label="Additional notes or instructions"
-                  />
+                  <label className="block text-sm font-medium">
+                    Customer name <span className="ml-1 text-destructive">*</span>
+                    <input
+                      name="customer_name"
+                      value={form.customer_name}
+                      onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      placeholder="Customer full name"
+                      aria-label="Customer full name"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Customer email
+                    <input
+                      type="email"
+                      name="customer_email"
+                      value={form.customer_email}
+                      onChange={(event) => setForm((current) => ({ ...current, customer_email: event.target.value }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      placeholder="Email address"
+                      aria-label="Email address"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Phone <span className="ml-1 text-destructive">*</span>
+                    <input
+                      name="customer_phone"
+                      value={form.customer_phone}
+                      onChange={(event) => setForm((current) => ({ ...current, customer_phone: event.target.value }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      placeholder="Phone number"
+                      aria-label="Phone number"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Date of birth
+                    <input
+                      type="date"
+                      name="date_of_birth"
+                      value={form.date_of_birth}
+                      onChange={(event) => setForm((current) => ({ ...current, date_of_birth: event.target.value }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      aria-label="Date of birth"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Service <span className="ml-1 text-destructive">*</span>
+                    <select
+                      name="service"
+                      value={form.service}
+                      onChange={(event) => setForm((current) => ({ ...current, service: event.target.value }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      required
+                    >
+                      {laboratoryServices.length === 0 ? (
+                        <option value="" disabled>
+                          Loading services...
+                        </option>
+                      ) : (
+                        laboratoryServices.map((service) => (
+                          <option key={service.id} value={service.name}>
+                            {service.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Type <span className="ml-1 text-destructive">*</span>
+                    <select
+                      name="booking_type"
+                      value={form.booking_type}
+                      onChange={(event) => setForm((current) => ({ ...current, booking_type: event.target.value as "lab" | "home" | "office" }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      required
+                    >
+                      <option value="lab">Lab</option>
+                      <option value="home">Home</option>
+                      <option value="office">Office</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Gender <span className="ml-1 text-destructive">*</span>
+                    <select
+                      name="gender"
+                      value={form.gender}
+                      onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value as "male" | "female" | "other" }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      required
+                    >
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Appointment date <span className="ml-1 text-destructive">*</span>
+                    <input
+                      type="date"
+                      name="appointment_date"
+                      value={form.appointment_date}
+                      onChange={(event) => setForm((current) => ({ ...current, appointment_date: event.target.value }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      aria-label="Preferred appointment date"
+                      min={new Date().toISOString().split("T")[0]}
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Appointment time <span className="ml-1 text-destructive">*</span>
+                    <input
+                      type="time"
+                      name="appointment_time"
+                      value={form.appointment_time}
+                      onChange={(event) => setForm((current) => ({ ...current, appointment_time: event.target.value }))}
+                      className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      aria-label="Preferred appointment time"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Notes
+                    <textarea
+                      name="notes"
+                      value={form.notes}
+                      onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                      className="mt-2 min-h-32 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                      placeholder="Additional notes or instructions"
+                      aria-label="Additional notes or instructions"
+                    />
+                  </label>
                   {status.message ? (
                     <p className={`text-sm ${status.type === "success" ? "text-emerald-600" : "text-red-600"}`}>{status.message}</p>
                   ) : null}

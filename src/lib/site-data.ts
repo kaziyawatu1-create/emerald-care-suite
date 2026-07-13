@@ -12,13 +12,15 @@ import Malaria from "../assets/malaria.jpeg";
 import Hpylori from "../assets/pylori.jpg";
 import shopWide from "../assets/hero.jpeg";
 import medineImage from "../assets/medicine.jpeg";
-import mainImage from "../assets/main.png"
+import mainImage from "../assets/main.png";
+import deliveryImage from "../assets/Delivery.png";
 
 export const heroImage = heroPharmacist;
 export const homeVisitImage = homeCollection;
 export const labWideImage = labWide;
 export const shopWideImage = shopWide;
 export const mainHero = mainImage;
+export const deliveryHero = deliveryImage;
 
 export const whyChooseItems = [
   {

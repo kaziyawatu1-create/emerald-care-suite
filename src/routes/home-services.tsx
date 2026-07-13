@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
-import { homeServices, homeVisitImage } from "../lib/site-data";
+import { homeVisitImage } from "../lib/site-data";
+import { listServices } from "../lib/services.functions";
+import type { ServiceItem } from "../lib/services";
 
 export const Route = createFileRoute("/home-services")({
   head: () => ({
@@ -16,6 +20,36 @@ export const Route = createFileRoute("/home-services")({
 });
 
 function HomeServicesPage() {
+  const loadServicesFn = useServerFn(listServices);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [selectedService, setSelectedService] = useState<string>("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    loadServicesFn()
+      .then((rows) => {
+        if (!mounted) return;
+        const next = Array.isArray(rows) ? (rows as ServiceItem[]) : [];
+        setServices(next);
+        if (next.length) {
+          setSelectedService((current) => current || next[0].name);
+        }
+      })
+      .catch(() => {
+        // allow the page to render without service data if the fetch fails
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadServicesFn]);
+
+  const homeServices = useMemo(
+    () => services.filter((service) => service.location === "home" || service.location === "office"),
+    [services]
+  );
+
   return (
     <>
       <PageHeader
@@ -36,14 +70,23 @@ function HomeServicesPage() {
             />
           </Reveal>
           <div className="grid gap-5">
-            {homeServices.map((service, index) => (
-              <Reveal key={service.title} delay={index * 60}>
+            {homeServices.length === 0 ? (
+              <Reveal>
                 <article className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift">
-                  <h2 className="font-display text-2xl font-bold">{service.title}</h2>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
+                  <h2 className="font-display text-2xl font-bold">No home services available</h2>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">We’re loading current home and workplace service offerings from the service catalog.</p>
                 </article>
               </Reveal>
-            ))}
+            ) : (
+              homeServices.map((service, index) => (
+                <Reveal key={service.id} delay={index * 60}>
+                  <article className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift">
+                    <h2 className="font-display text-2xl font-bold">{service.name}</h2>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
+                  </article>
+                </Reveal>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -58,14 +101,27 @@ function HomeServicesPage() {
                 </span>
                 <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Request a home appointment</h2>
               </div>
-              <form onSubmit={(e) => e.preventDefault()} className="mt-8 grid gap-4 md:grid-cols-2">
+              <form onSubmit={(e: FormEvent<HTMLFormElement>) => e.preventDefault()} className="mt-8 grid gap-4 md:grid-cols-2">
                 <input className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary" placeholder="Full name" aria-label="Full name" />
                 <input className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary" placeholder="Phone number" aria-label="Phone number" />
                 <input className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary" placeholder="Email address" aria-label="Email address" />
-                <select className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary" aria-label="Select service">
-                  <option>Home Sample Collection</option>
-                  <option>Medicine Delivery</option>
-                  <option>Home Consultation</option>
+                <select
+                  className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                  aria-label="Select service"
+                  value={selectedService}
+                  onChange={(event) => setSelectedService(event.target.value)}
+                >
+                  {homeServices.length === 0 ? (
+                    <option value="" disabled>
+                      Loading home services...
+                    </option>
+                  ) : (
+                    homeServices.map((service) => (
+                      <option key={service.id} value={service.name}>
+                        {service.name}
+                      </option>
+                    ))
+                  )}
                 </select>
                 <input className="rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary md:col-span-2" placeholder="Address" aria-label="Address" />
                 <textarea className="min-h-32 rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary md:col-span-2" placeholder="Tell us what you need" aria-label="Tell us what you need" />

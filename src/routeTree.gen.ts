@@ -13,6 +13,7 @@ import { Route as SkincareRouteImport } from './routes/skincare'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as ServicesRouteImport } from './routes/services'
+import { Route as PrescriptionRouteImport } from './routes/prescription'
 import { Route as PharmacyRouteImport } from './routes/pharmacy'
 import { Route as PerfumesRouteImport } from './routes/perfumes'
 import { Route as OffersRouteImport } from './routes/offers'
@@ -46,6 +47,11 @@ const ShopRoute = ShopRouteImport.update({
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
   path: '/services',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrescriptionRoute = PrescriptionRouteImport.update({
+  id: '/prescription',
+  path: '/prescription',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PharmacyRoute = PharmacyRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/offers': typeof OffersRoute
   '/perfumes': typeof PerfumesRoute
   '/pharmacy': typeof PharmacyRoute
+  '/prescription': typeof PrescriptionRoute
   '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/offers': typeof OffersRoute
   '/perfumes': typeof PerfumesRoute
   '/pharmacy': typeof PharmacyRoute
+  '/prescription': typeof PrescriptionRoute
   '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/offers': typeof OffersRoute
   '/perfumes': typeof PerfumesRoute
   '/pharmacy': typeof PharmacyRoute
+  '/prescription': typeof PrescriptionRoute
   '/services': typeof ServicesRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/offers'
     | '/perfumes'
     | '/pharmacy'
+    | '/prescription'
     | '/services'
     | '/shop'
     | '/sitemap.xml'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/offers'
     | '/perfumes'
     | '/pharmacy'
+    | '/prescription'
     | '/services'
     | '/shop'
     | '/sitemap.xml'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/offers'
     | '/perfumes'
     | '/pharmacy'
+    | '/prescription'
     | '/services'
     | '/shop'
     | '/sitemap.xml'
@@ -255,6 +267,7 @@ export interface RootRouteChildren {
   OffersRoute: typeof OffersRoute
   PerfumesRoute: typeof PerfumesRoute
   PharmacyRoute: typeof PharmacyRoute
+  PrescriptionRoute: typeof PrescriptionRoute
   ServicesRoute: typeof ServicesRoute
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/services'
       fullPath: '/services'
       preLoaderRoute: typeof ServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prescription': {
+      id: '/prescription'
+      path: '/prescription'
+      fullPath: '/prescription'
+      preLoaderRoute: typeof PrescriptionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pharmacy': {
@@ -407,6 +427,7 @@ const rootRouteChildren: RootRouteChildren = {
   OffersRoute: OffersRoute,
   PerfumesRoute: PerfumesRoute,
   PharmacyRoute: PharmacyRoute,
+  PrescriptionRoute: PrescriptionRoute,
   ServicesRoute: ServicesRoute,
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

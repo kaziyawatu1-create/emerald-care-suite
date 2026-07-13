@@ -1,10 +1,17 @@
-export type ServiceType = "inhouse" | "at-home";
+export type ServiceType = "inhouse" | "at-home" | "hybrid";
+export type ServiceStatus = "active" | "inactive" | "pending";
+export type ServiceLocation = "lab-only" | "office" | "home";
 
 export interface ServiceItem {
   id: string;
   name: string;
   description: string;
   type: ServiceType;
+  price_kes: number;
+  duration_minutes: number;
+  test_results: string;
+  status: ServiceStatus;
+  location: ServiceLocation;
   createdAt: string;
 }
 
@@ -16,6 +23,11 @@ const defaultServices: ServiceItem[] = [
     name: "Home Sample Collection",
     description: "Professional sample collection at your residence or workplace for fast lab processing.",
     type: "at-home",
+    price_kes: 2500,
+    duration_minutes: 60,
+    test_results: "Sample handling, lab coordination, and result delivery.",
+    status: "active",
+    location: "home",
     createdAt: "2026-07-04",
   },
   {
@@ -23,6 +35,11 @@ const defaultServices: ServiceItem[] = [
     name: "In-clinic Consultation",
     description: "Personalized consultations with our pharmacists and healthcare professionals.",
     type: "inhouse",
+    price_kes: 1500,
+    duration_minutes: 45,
+    test_results: "Clinical evaluation and treatment recommendations.",
+    status: "active",
+    location: "lab-only",
     createdAt: "2026-07-04",
   },
 ];
@@ -32,9 +49,22 @@ export function readServices(): ServiceItem[] {
 
   try {
     const raw = window.localStorage.getItem(storageKey);
-    const parsed = raw ? (JSON.parse(raw) as ServiceItem[]) : defaultServices;
+    const parsed = raw ? (JSON.parse(raw) as Partial<ServiceItem>[]) : defaultServices;
 
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultServices;
+    const normalized = Array.isArray(parsed) && parsed.length > 0 ? parsed : defaultServices;
+
+    return normalized.map((service) => ({
+      id: service.id ?? crypto.randomUUID(),
+      name: service.name ?? "",
+      description: service.description ?? "",
+      type: service.type ?? "inhouse",
+      price_kes: service.price_kes ?? 0,
+      duration_minutes: service.duration_minutes ?? 30,
+      test_results: service.test_results ?? "",
+      status: service.status ?? "active",
+      location: service.location ?? "lab-only",
+      createdAt: service.createdAt ?? new Date().toISOString().split("T")[0],
+    }));
   } catch {
     return defaultServices;
   }
@@ -46,5 +76,13 @@ export function writeServices(services: ServiceItem[]) {
 }
 
 export function formatServiceType(type: ServiceType) {
-  return type === "at-home" ? "At home" : "In-house";
+  if (type === "at-home") return "At home";
+  if (type === "hybrid") return "Hybrid";
+  return "In-house";
+}
+
+export function formatServiceLocation(location: ServiceLocation) {
+  if (location === "office") return "Office visit";
+  if (location === "home") return "Home visit";
+  return "Lab only";
 }

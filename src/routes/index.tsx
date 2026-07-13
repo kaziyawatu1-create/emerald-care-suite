@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ShieldCheck,
   FlaskConical,
@@ -16,6 +16,7 @@ import {
   Pill,
   Sparkles,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { Counter } from "../components/site/Counter";
 import { Reveal } from "../components/site/Reveal";
 import { TestimonialsCarousel } from "../components/site/TestimonialsCarousel";
@@ -30,8 +31,11 @@ import {
   partners,
   serviceCategories,
   whyChooseItems,
-  shopWideImage
+  shopWideImage,
+  deliveryHero,
 } from "../lib/site-data";
+import { listServices } from "../lib/services.functions";
+import type { ServiceItem } from "../lib/services";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -57,9 +61,16 @@ const whyIcons = [ShieldCheck, FlaskConical, Stethoscope, Wallet];
 const featureIcons = [Microscope, Pill, HeartPulse, Sparkles];
 
 function Index() {
-  const heroSlides = [heroImage, shopWideImage, labWideImage, homeVisitImage];
+  const heroSlides = [heroImage, shopWideImage, labWideImage, homeVisitImage, deliveryHero];
   const marketingVideos = [clip1, clip2];
   const [activeSlide, setActiveSlide] = useState(0);
+  const loadServicesFn = useServerFn(listServices);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+
+  const labServices = useMemo(
+    () => services.filter((service) => service.location === "lab-only"),
+    [services]
+  );
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -68,6 +79,23 @@ function Index() {
 
     return () => window.clearInterval(timer);
   }, [heroSlides.length]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    loadServicesFn()
+      .then((rows) => {
+        if (!mounted) return;
+        setServices(Array.isArray(rows) ? (rows as ServiceItem[]) : []);
+      })
+      .catch(() => {
+        // Keep the page usable even if service loading fails.
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadServicesFn]);
 
   return (
     <>
@@ -78,40 +106,53 @@ function Index() {
           alt="Modern pharmacy laboratory interior"
           className="absolute inset-0 h-full w-full object-cover mix-blend-multiply opacity-40"
           width={1600}
-          height={1200}
+          height={800}
         />
-        <div className="relative mx-auto grid min-h-[56vh] max-w-7xl items-center gap-8 px-4 py-8 md:min-h-[60vh] md:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-10">
+        <div className="relative mx-auto grid min-h-[36vh] max-w-7xl items-center gap-8 px-4 py-8 md:min-h-[30vh] md:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-10">
           <Reveal className="text-primary-foreground">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/8 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]">
-              Premium Medical + Modern Luxury
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#2BB673]/20 bg-[#EAF9F2] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#0F6CBD]">
+              Trusted Pharmacy Care
             </span>
-            <h1 className="mt-5 font-display text-4xl font-bold leading-[0.95] md:text-6xl">
-              Welness starts here.
+            <h1 className="mt-5 font-display text-4xl font-bold leading-[0.95] text-foreground md:text-6xl text-white">
+              Welness Starts Here
             </h1>
-            <p className="mt-4 max-w-2xl text-lg font-medium text-primary-foreground/90 md:text-xl">
-              Quality Medicines. Reliable Laboratory Services. Professional Healthcare Solutions.
+            <p className="mt-4 max-w-2xl text-lg font-medium  md:text-xl text-white">
+              Genuine medicines, professional pharmaceutical care, laboratory services, skincare products, vitamins, and wellness solutions—all in one trusted pharmacy.
             </p>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-primary-foreground/78 md:text-lg">
-              Providing genuine medicines, accurate laboratory testing, skincare products, vitamins,
-              perfumes, and professional pharmaceutical care for individuals, families, and businesses.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/laboratory" className="rounded-full bg-[#0047AB] px-7 py-3.5 text-sm font-display font-semibold text-white shadow-elegant transition-transform hover:-translate-y-0.5 hover:bg-[#003b8f]">
-                Book Lab Test
-              </Link>
-              <Link to="/shop" className="rounded-full border border-[#0047AB]/25 bg-white/90 px-7 py-3.5 text-sm font-display font-semibold text-[#0047AB] backdrop-blur-sm transition-colors hover:bg-white">
-                Shop Now
-              </Link>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap gap-3">
+                <Link to="/shop" className="rounded-full bg-[#0F6CBD] px-7 py-3.5 text-sm font-display font-semibold text-white shadow-elegant transition-transform hover:-translate-y-0.5 hover:bg-blue-700">
+                  Shop Medicines
+                </Link>
+                <Link to="/laboratory" className="rounded-full border border-[#0F6CBD]/25 bg-white/90 px-7 py-3.5 text-sm font-display font-semibold text-[#0F6CBD] backdrop-blur-sm transition-colors hover:bg-white">
+                  Book a Lab Test
+                </Link>
+                <Link to="/contact" className="rounded-full border border-[#2BB673]/25 bg-[#EAF9F2] px-7 py-3.5 text-sm font-display font-semibold text-[#0F6CBD] transition-colors hover:bg-[#d9f1e7]">
+                  Contact Pharmacist
+                </Link>
+              </div>
             </div>
-            <div className="mt-10 grid max-w-2xl gap-4 sm:grid-cols-3">
+            <div className="mt-6 flex flex-wrap gap-2">
               {[
-                ["15+", "Years Experience"],
-                ["10,000+", "Satisfied Customers"],
-                ["24/7", "Customer Support"],
+                "Genuine Medicines",
+                "Licensed Pharmacists",
+                "Certified Laboratory",
+                "Fast Prescription Service",
+              ].map((badge) => (
+                <span key={badge} className="rounded-full border border-[#0F6CBD]/15 bg-white px-3 py-2 text-xs font-semibold text-[#0F6CBD] shadow-sm">
+                  {badge}
+                </span>
+              ))}
+            </div>
+            <div className="mt-10 grid max-w-2xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                ["15+", "Years Serving"],
+                ["10K+", "Happy Customers"],
+                ["500+", "Medicines Available"],
               ].map(([value, label]) => (
-                <div key={label} className="rounded-[var(--radius-xl)] border border-primary-foreground/15 bg-primary-foreground/8 px-5 py-4 backdrop-blur-sm">
-                  <div className="text-2xl font-display font-bold">{value}</div>
-                  <div className="mt-1 text-sm text-primary-foreground/72">{label}</div>
+                <div key={label} className="rounded-[var(--radius-xl)] border border-border bg-muted/20 px-5 py-4 shadow-soft">
+                  <div className="text-2xl font-display font-bold text-white/70">{value}</div>
+                  <div className="mt-1 text-sm text-muted-white">{label}</div>
                 </div>
               ))}
             </div>
@@ -122,7 +163,7 @@ function Index() {
               <img
                 src={heroSlides[activeSlide]}
                 alt="Nuno Pharmacy highlights"
-                className="aspect-[4/5] w-full rounded-[calc(var(--radius-3xl))] object-cover transition-all duration-500"
+                className="aspect-[5/4] w-full rounded-[calc(var(--radius-3xl))] object-cover transition-all duration-500"
                 width={1280}
                 height={1600}
               />
@@ -153,10 +194,6 @@ function Index() {
                   Next
                 </button>
               </div>
-            </div>
-            <div className="absolute -left-4 bottom-6 rounded-[var(--radius-xl)] border border-border bg-card px-4 py-4 shadow-soft sm:-left-10">
-              <div className="text-sm font-semibold text-muted-foreground">Trusted service</div>
-              <div className="mt-1 font-display text-xl font-bold">Certified lab & pharmacy</div>
             </div>
           </Reveal>
         </div>
@@ -310,22 +347,24 @@ function Index() {
               Laboratory Services
             </span>
             <h2 className="mt-5 font-display text-3xl font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-4xl md:text-5xl">Professional Laboratory Services</h2>
-            <div className="mt-7 grid gap-3 sm:grid-cols-2">
-              {[
-                "Rapid HIV Testing",
-                "Blood Sugar Test",
-                "Malaria Testing",
-                "H. pylori Test",
-                "Blood Grouping",
-                "Home Sample Collection",
-                "Office Sample Collection",
-                "Home Healthcare",
-              ].map((item) => (
-                <div key={item} className="flex gap-2 rounded-2xl border border-border bg-muted/40 px-4 py-3 text-sm font-medium">
-                  <Check className="mt-0.5 h-4 w-4 text-primary" />
-                  <span>{item}</span>
+            <div className="mt-7 grid gap-6 sm:grid-cols-2">
+              {labServices.length === 0 ? (
+                <div className="rounded-2xl border border-border bg-muted/40 p-6 text-sm text-muted-foreground">
+                  Loading laboratory services from the database...
                 </div>
-              ))}
+              ) : (
+                labServices.map((service) => (
+                  <div key={service.id} className="flex h-full flex-col rounded-2xl border border-border bg-muted/40 p-6 text-sm">
+                    <div className="mb-3 flex items-center gap-2 text-primary">
+                      <Check className="h-4 w-4" />
+                      <span className="font-semibold uppercase tracking-wider">{service.name}</span>
+                    </div>
+                    <p className="text-muted-foreground">
+                      {service.description.split("\n")[0]}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
             <Link to="/laboratory" className="mt-8 inline-flex rounded-full btn-gradient px-7 py-3.5 text-sm font-display font-semibold">
               Book Appointment

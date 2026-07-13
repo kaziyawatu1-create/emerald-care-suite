@@ -156,6 +156,126 @@ export type Database = {
           },
         ]
       }
+      services: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          location: string
+          name: string
+          price_kes: number
+          status: string
+          test_results: string
+          duration_minutes: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          location?: string
+          name: string
+          price_kes: number
+          status?: string
+          test_results: string
+          duration_minutes: number
+          type: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          location?: string
+          name?: string
+          price_kes?: number
+          status?: string
+          test_results?: string
+          duration_minutes?: number
+          type?: string
+        }
+        Relationships: []
+      }
+      bookings: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          booking_number: string
+          booking_type: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          date_of_birth: string
+          gender: string
+          id: string
+          notes: string | null
+          service: string
+          status: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          booking_number: string
+          booking_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          date_of_birth: string
+          gender?: string
+          id?: string
+          notes?: string | null
+          service: string
+          status?: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          booking_number?: string
+          booking_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          date_of_birth?: string
+          gender?: string
+          id?: string
+          notes?: string | null
+          service?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      prescriptions: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          prescription_path: string
+          prescription_url: string
+          uploaded_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          id?: string
+          prescription_path: string
+          prescription_url: string
+          uploaded_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          prescription_path?: string
+          prescription_url?: string
+          uploaded_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           id: string

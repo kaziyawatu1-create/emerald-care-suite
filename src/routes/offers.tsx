@@ -138,7 +138,7 @@ function OffersPage() {
     loadOffersFn()
       .then((rows) => {
         if (!mounted) return;
-        const nextOffers = Array.isArray(rows) ? (rows as OfferItem[]) : [];
+        const nextOffers = Array.isArray(rows) ? (rows as unknown as OfferItem[]) : [];
         setOffers(nextOffers.length > 0 ? nextOffers : fallbackOffers);
       })
       .catch(() => {
