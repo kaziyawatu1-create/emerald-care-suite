@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Gift, Headset, Info, LayoutGrid, Mail, Menu, Phone, ShoppingBag, Sparkles, Stethoscope, Tag, UserRound, Upload, X } from "lucide-react";
+import { ChevronDown, Gift, Headset, Info, LayoutGrid, Mail, Menu, Phone, ShoppingBag, Sparkles, Stethoscope, Tag, UserRound, Upload, X ,MessageCircle} from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { listBrands } from "@/lib/shop.functions";
 import { createPrescription, getPrescription } from "@/lib/prescriptions.functions";
@@ -201,7 +201,7 @@ export function Navbar() {
               <Phone className="h-3.5 w-3.5" /> +254 703 244 711
             </a>|
              <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
-              <Phone className="h-3.5 w-3.5" /> +254 703 244 711
+              <MessageCircle className="h-3.5 w-3.5 text-green-500" /> +254 768 244 711
             </a>|
             <a href="mailto:nunopharmaceutical@gmail.com" className="inline-flex items-center gap-1.5 hover:opacity-90">
               <Mail className="h-3.5 w-3.5" /> nunopharmaceutical@gmail.com
