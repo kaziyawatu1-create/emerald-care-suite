@@ -252,7 +252,7 @@ function ServicesPage() {
         compact
         eyebrow="Services"
         title="Reliable laboratory diagnostics with professional care"
-        subtitle="Committed to providing accurate and affordable medical laboratory services at your confort zone-from in house diagnostics to home and office sample collection and delivery."
+        subtitle="Committed to providing accurate and affordable medical laboratory services at your comfort zone-from in house diagnostics to home and office sample collection and delivery."
       />
 
       <section className="py-8">

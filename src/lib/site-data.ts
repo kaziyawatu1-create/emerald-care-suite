@@ -44,7 +44,7 @@ export const whyChooseItems = [
     href: "/shop",
   },
   {
-    title: "Affordable Healthcare",
+    title: "Book doctor's Appointment",
     description: "Quality healthcare solutions at prices everyone can afford.",
     href: "/book-appointment",
   },

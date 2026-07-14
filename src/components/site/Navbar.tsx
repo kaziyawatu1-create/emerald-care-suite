@@ -214,7 +214,7 @@ export function Navbar() {
         <div className="mx-auto max-w-7xl px-4 py-3 md:px-8">
           <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center rounded-2xl p-2">
             <Link to="/" className="flex items-center gap-2.5 group lg:min-w-60">
-              <img src={logoImage} alt="Nuno Pharmacy logo" className="h-26 w-26 object-cover transition group-hover:scale-105" />
+              <img src={logoImage} alt="Nuno Pharmacy logo" className="h-30 w-30 object-cover transition group-hover:scale-105" />
               <span className="font-display text-lg font-bold tracking-tight"><span className="text-primary">Pharmacy</span></span>
             </Link>
 
