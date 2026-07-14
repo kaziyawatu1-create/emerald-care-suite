@@ -44,7 +44,7 @@ export function Footer() {
             <li className="flex gap-2.5"><Mail className="h-4 w-4 text-primary mt-0.5" /> nunopharmaceutical@gmail.com</li>
             <li className="flex gap-2.5"><MessageCircle className="h-4 w-4 text-primary mt-0.5" /> <a href="https://www.tiktok.com/@nunopharma" target="_blank" rel="noreferrer" className="hover:text-primary">@nunopharma</a></li>
             <li className="flex gap-2.5"><MapPin className="h-4 w-4 text-primary mt-0.5" /> Kenya, Nairobi, South C, opposite Midad Academy, off Popo Road</li>
-            <li className="flex gap-2.5"><Clock className="h-4 w-4 text-primary mt-0.5" /> Mon–Sun · 7:00 — 22:00</li>
+            <li className="flex gap-2.5"><Clock className="h-4 w-4 text-primary mt-0.5" /> Mon–Sat · 8:00 — 22:00</li>
           </ul>
         </div>
 
