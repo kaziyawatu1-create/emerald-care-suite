@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Check, ArrowRight, ImageIcon, Phone, MessageCircle } from "lucide-react";
+import { ArrowRight, Check, Phone, MessageCircle } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
+import { ServiceIcon } from "../components/site/ServiceIcon";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import {
 } from "../components/ui/dialog";
 import { createBooking } from "../lib/bookings.functions";
 import { listServices } from "../lib/services.functions";
-import type { ServiceItem } from "../lib/services";
+import { formatServicePrice, formatServiceTat, type ServiceItem } from "../lib/services";
 
 export const Route = createFileRoute("/laboratory")({
   head: () => ({
@@ -361,34 +362,20 @@ function LaboratoryPage() {
           {laboratoryServices.map((service, index) => (
             <Reveal key={service.id} delay={index * 50}>
               <article className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift">
-                <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-muted/50">
-                  {service.image_urls?.[0] ? (
-                    <img
-                      src={service.image_urls[0]}
-                      alt={service.name}
-                      className="aspect-[16/10] w-full object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="flex aspect-[16/10] items-center justify-center text-muted-foreground">
-                      <ImageIcon className="h-10 w-10" />
-                    </div>
-                  )}
+                <div className="mb-4">
+                  <ServiceIcon iconUrl={service.icon_url} alt={service.name} />
                 </div>
                 <div>
                   <h2 className="font-display text-xl font-semibold">{service.name}</h2>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {service.description.split("\n")[0]}
-                  </p>
                 </div>
                 <div className="mt-6 grid gap-3 text-sm text-muted-foreground">
                   <div>
-                    <span className="font-semibold text-foreground">Price:</span> KES{" "}
-                    {service.price_kes}
+                    <span className="font-semibold text-foreground">Price:</span>{" "}
+                    {formatServicePrice(service.price_kes)}
                   </div>
                   <div>
-                    <span className="font-semibold text-foreground">Duration:</span>{" "}
-                    {service.duration_minutes} min
+                    <span className="font-semibold text-foreground">TAT:</span>{" "}
+                    {formatServiceTat(service.duration_minutes)}
                   </div>
                 </div>
                 <a

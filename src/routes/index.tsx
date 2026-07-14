@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import { TestimonialsCarousel } from "../components/site/TestimonialsCarousel";
+import { ServiceIcon } from "../components/site/ServiceIcon";
 import pathwayLabLogo from "../assets/pathway.png";
 import clip1 from "../assets/marketing2.mp4";
 import clip2 from "../assets/marketing.mp4";
@@ -43,10 +44,11 @@ import {
   skincareHero,
   medicineHero,
   labHero,
+  officeHero,
 } from "../lib/site-data";
+import { formatServicePrice, formatServiceTat, type ServiceItem } from "../lib/services";
 import { listServices } from "../lib/services.functions";
 import { createBooking } from "../lib/bookings.functions";
-import type { ServiceItem } from "../lib/services";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -99,10 +101,7 @@ function Index() {
   }>({ type: "idle", message: "" });
   const [isSubmittingQuickBooking, setIsSubmittingQuickBooking] = useState(false);
 
-  const labServices = useMemo(
-    () => services.filter((service) => service.location === "lab-only"),
-    [services],
-  );
+  const labServices = useMemo(() => services, [services]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -289,7 +288,7 @@ function Index() {
         />
         <div className="relative mx-auto grid min-h-[36vh] max-w-7xl items-center gap-8 px-4 py-8 md:min-h-[30vh] md:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-10">
           <Reveal className="text-primary-foreground">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#2BB673]/20 bg-[#EAF9F2] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#0F6CBD]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#2BB673]/20 bg-[#EAF9F2] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#2BB673]">
               Trusted Pharmacy Care
             </span>
             <h1 className="mt-5 font-display text-4xl font-bold leading-[0.95] text-foreground md:text-6xl text-white">
@@ -303,19 +302,19 @@ function Index() {
               <div className="flex flex-wrap gap-3">
                 <Link
                   to="/shop"
-                  className="rounded-full bg-[#0F6CBD] px-7 py-3.5 text-sm font-display font-semibold text-white shadow-elegant transition-transform hover:-translate-y-0.5 hover:bg-blue-700"
+                  className="rounded-full bg-[#2BB673] px-7 py-3.5 text-sm font-display font-semibold text-white shadow-elegant transition-transform hover:-translate-y-0.5 hover:bg-[#249e63]"
                 >
                   Shop Medicines
                 </Link>
                 <Link
                   to="/services"
-                  className="rounded-full border border-[#0F6CBD]/25 bg-white/90 px-7 py-3.5 text-sm font-display font-semibold text-[#0F6CBD] backdrop-blur-sm transition-colors hover:bg-white"
+                  className="rounded-full border border-[#2BB673]/25 bg-white/90 px-7 py-3.5 text-sm font-display font-semibold text-[#2BB673] backdrop-blur-sm transition-colors hover:bg-white"
                 >
                   Book a Lab Test
                 </Link>
                 <Link
                   to="/contact"
-                  className="rounded-full border border-[#2BB673]/25 bg-[#EAF9F2] px-7 py-3.5 text-sm font-display font-semibold text-[#0F6CBD] transition-colors hover:bg-[#d9f1e7]"
+                  className="rounded-full border border-[#2BB673]/25 bg-[#EAF9F2] px-7 py-3.5 text-sm font-display font-semibold text-[#2BB673] transition-colors hover:bg-[#d9f1e7]"
                 >
                   Contact Pharmacist
                 </Link>
@@ -330,7 +329,7 @@ function Index() {
               ].map((badge) => (
                 <span
                   key={badge}
-                  className="rounded-full border border-[#0F6CBD]/15 bg-white px-3 py-2 text-xs font-semibold text-[#0F6CBD] shadow-sm"
+                  className="rounded-full border border-[#2BB673]/15 bg-white px-3 py-2 text-xs font-semibold text-[#2BB673] shadow-sm"
                 >
                   {badge}
                 </span>
@@ -446,7 +445,10 @@ function Index() {
               const Icon = whyIcons[index];
               return (
                 <Reveal key={item.title} delay={index * 80}>
-                  <article className="h-full rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift">
+                  <Link
+                    to={item.href}
+                    className="block h-full rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  >
                     <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                       <Icon className="h-6 w-6" />
                     </div>
@@ -454,7 +456,7 @@ function Index() {
                     <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                       {item.description}
                     </p>
-                  </article>
+                  </Link>
                 </Reveal>
               );
             })}
@@ -560,7 +562,7 @@ function Index() {
           <Reveal>
             <div className="overflow-hidden rounded-[var(--radius-3xl)] border border-border bg-card p-3 shadow-elegant">
               <img
-                src={labHero}
+                src={officeHero}
                 alt="Professional laboratory services"
                 className="aspect-[4/3] w-full rounded-[calc(var(--radius-3xl)-6px)] object-cover"
                 loading="lazy"
@@ -587,11 +589,13 @@ function Index() {
                     key={service.id}
                     className="flex h-full flex-col rounded-2xl border border-border bg-muted/40 p-6 text-sm"
                   >
-                    <div className="mb-3 flex items-center gap-2 text-primary">
-                      <Check className="h-4 w-4" />
+                    <div className="mb-3 flex items-center gap-3 text-primary">
+                      <ServiceIcon iconUrl={service.icon_url} alt={service.name} size="sm" />
                       <span className="font-semibold uppercase tracking-wider">{service.name}</span>
                     </div>
-                    <p className="text-muted-foreground">{service.description.split("\n")[0]}</p>
+                    <p className="text-muted-foreground">
+                      {formatServicePrice(service.price_kes)} · TAT {formatServiceTat(service.duration_minutes)}
+                    </p>
                   </div>
                 ))
               )}

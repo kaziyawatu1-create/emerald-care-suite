@@ -13,6 +13,9 @@ import PerfumeImage from "../assets/Final-perfumes.png";
 import skincareImage from "../assets/final-skincare.png";
 import medicineImage from "../assets/Med-final.png";
 import LabImage from "../assets/Lab-final.png";
+import Vitaminz from '../assets/vitamine.png';
+import Skiny from '../assets/Skinyi.png';
+import office  from '../assets/Officess.png'
 
 export const heroImage = heroPharmacist;
 export const homeVisitImage = homeCollection;
@@ -22,23 +25,28 @@ export const perfumeHero = PerfumeImage;
 export const skincareHero = skincareImage;
 export const medicineHero = medicineImage;
 export const labHero = LabImage;
+export const officeHero = office;
 export const whyChooseItems = [
   {
     title: "Genuine Medicines",
     description:
       "100% authentic medicines sourced only from recognized pharmaceutical suppliers.",
+    href: "/shop",
   },
   {
     title: "Certified Laboratory",
     description: "Fast, reliable, and highly accurate diagnostic services.",
+    href: "/services",
   },
   {
     title: "Qualified Pharmacists",
     description: "Professional advice and accurate prescription dispensing.",
+    href: "/shop",
   },
   {
     title: "Affordable Healthcare",
     description: "Quality healthcare solutions at prices everyone can afford.",
+    href: "/book-appointment",
   },
 ] as const;
 
@@ -63,7 +71,7 @@ export const serviceCategories = [
   {
     title: "Pharmacy",
     description: "Genuine prescription and over-the-counter medicines, routine medications, vitamins and supplements.",
-    image: servicePharmacy,
+    image: Vitaminz,
     href: "/shop",
     points: [
       "Genuine Medicines",
@@ -91,7 +99,7 @@ export const serviceCategories = [
   {
     title: "Skincare Products",
     description: "Premium skincare including serums, cleansers, moisturizers, sunscreens and acne solutions.",
-    image: skincareHero,
+    image: Skiny,
     href: "/skincare",
     points: ["Serums", "Facial Cleansers", "Moisturizers", "Sunscreens", "Acne Solutions"],
     cta: "Explore Skincare",
@@ -116,13 +124,13 @@ export const featuredProducts = [
   {
     title: "Skincare",
     description: "Dermatology-forward skincare curated for healthy, resilient skin.",
-    image: skincareHero,
+    image: Skiny,
     href: "/shop",
   },
   {
     title: "Vitamins",
     description: "Daily wellness support with carefully selected supplements.",
-    image: medicineHero,
+    image: Vitaminz,
     href: "/shop",
   },
   {

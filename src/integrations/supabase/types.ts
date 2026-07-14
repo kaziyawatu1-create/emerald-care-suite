@@ -159,39 +159,27 @@ export type Database = {
       services: {
         Row: {
           created_at: string
-          description: string
           id: string
-          location: string
+          icon_url: string | null
           name: string
           price_kes: number
-          status: string
-          test_results: string
           duration_minutes: number
-          type: string
         }
         Insert: {
           created_at?: string
-          description: string
           id?: string
-          location?: string
+          icon_url?: string | null
           name: string
           price_kes: number
-          status?: string
-          test_results: string
           duration_minutes: number
-          type: string
         }
         Update: {
           created_at?: string
-          description?: string
           id?: string
-          location?: string
+          icon_url?: string | null
           name?: string
           price_kes?: number
-          status?: string
-          test_results?: string
           duration_minutes?: number
-          type?: string
         }
         Relationships: []
       }

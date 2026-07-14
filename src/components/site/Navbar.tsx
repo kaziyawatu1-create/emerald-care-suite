@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Gift, Headset, Info, Mail, Menu, Phone, ShoppingBag, Sparkles, Stethoscope, Tag, UserRound, Upload, X } from "lucide-react";
+import { ChevronDown, Gift, Headset, Info, LayoutGrid, Mail, Menu, Phone, ShoppingBag, Sparkles, Stethoscope, Tag, UserRound, Upload, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { listBrands } from "@/lib/shop.functions";
 import { createPrescription, getPrescription } from "@/lib/prescriptions.functions";
@@ -12,7 +12,7 @@ import logoImage from "@/assets/LOGO.jpg";
 const links = [
   { to: "/", label: "Home" },
   { to: "/shop", label: "Shop by category" },
-  { to: "/services", label: "Services" },
+  { to: "/categories", label: "services" },
 ] as const;
 
 type NavbarBrand = {
@@ -237,6 +237,7 @@ export function Navbar() {
                     "/": <Sparkles className="h-4 w-4" />,
                     "/shop": <ShoppingBag className="h-4 w-4" />,
                     "/services": <Gift className="h-4 w-4" />,
+                    "/categories": <LayoutGrid className="h-4 w-4" />,
                   };
 
                   return (
@@ -404,6 +405,7 @@ export function Navbar() {
                 "/about": <UserRound className="h-4 w-4" />,
                 "/shop": <ShoppingBag className="h-4 w-4" />,
                 "/services": <Gift className="h-4 w-4" />,
+                "/categories": <LayoutGrid className="h-4 w-4" />,
                 "/contact": <Mail className="h-4 w-4" />,
               };
 

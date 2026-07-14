@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Eye, ImageIcon, Phone, MessageCircle } from "lucide-react";
-import pathwayLabLogo from "../assets/pathway-lab-logo.svg";
+import { ArrowRight, Clock3, Eye, Headset, Package, Phone, MessageCircle } from "lucide-react";
+import pathwayLabLogo from "../assets/pathway.png";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
+import { ServiceIcon } from "../components/site/ServiceIcon";
 import {
   Dialog,
   DialogContent,
@@ -13,14 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
-import { Badge } from "../components/ui/badge";
-import {
-  formatServiceLocation,
-  formatServiceType,
-  readServices,
-  type ServiceItem,
-  type ServiceStatus,
-} from "../lib/services";
+import { formatServicePrice, formatServiceTat, readServices, type ServiceItem } from "../lib/services";
 import { listServices } from "../lib/services.functions";
 import { createBooking } from "../lib/bookings.functions";
 
@@ -105,12 +99,6 @@ function ServicesPage() {
 
   const featuredServices = useMemo(() => services.slice(0, 6), [services]);
 
-  const getStatusVariant = (status: ServiceStatus) => {
-    if (status === "pending") return "secondary";
-    if (status === "inactive") return "destructive";
-    return "default";
-  };
-
   const bookingSteps = [
     { label: "Contact details", description: "Tell us who the booking is for." },
     { label: "Appointment", description: "Choose a date, time, and add notes." },
@@ -194,11 +182,7 @@ function ServicesPage() {
           customer_email: quickBookingForm.customer_email.trim(),
           date_of_birth: new Date().toISOString().slice(0, 10),
           gender: "other",
-          booking_type:
-            quickBookingService.location === "home-only" ||
-            quickBookingService.location === "home-office"
-              ? "home"
-              : "office",
+          booking_type: "office",
           appointment_date: new Date().toISOString().slice(0, 10),
           appointment_time: "09:00",
           notes: `Quick booking via ${quickBookingMode === "call" ? "phone call" : "WhatsApp"}.`,
@@ -267,43 +251,56 @@ function ServicesPage() {
       <PageHeader
         compact
         eyebrow="Services"
-        title="Flexible healthcare support for every routine"
-        subtitle="Choose from in-house care and at-home visits designed around your schedule and comfort."
+        title="Reliable laboratory diagnostics with professional care"
+        subtitle="Committed to providing accurate and affordable medical laboratory services at your confort zone-from in house diagnostics to home and office sample collection and delivery."
       />
 
       <section className="py-8">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
-          <Reveal>
-            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[var(--radius-2xl)] border border-primary/20 bg-primary/5 p-3 shadow-soft">
-              <img
-                src={pathwayLabLogo}
-                alt="Pathway Lab logo"
-                className="h-10 w-10 rounded-full border border-border bg-white p-1"
-              />
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Collaborating with Pathway Lab
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  We partner with Pathway Lab for trusted diagnostics, professional sample handling
-                  and coordinated healthcare support.
-                </p>
-              </div>
-            </div>
-          </Reveal>
+          <div className="mb-6 grid gap-4 md:grid-cols-2">
+            <Reveal>
+              <article className="flex h-full items-center gap-4 rounded-[var(--radius-2xl)] border border-primary/20 bg-primary/5 p-5 shadow-soft card-lift">
+                <img
+                  src={pathwayLabLogo}
+                  alt="Pathway Lab logo"
+                  className="h-16 w-16 shrink-0 rounded-2xl border border-border bg-white object-contain p-1.5"
+                />
+                <div>
+                  <p className="font-display text-lg font-semibold text-foreground">
+                    Collaborating with Pathway Lab
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    Trusted diagnostics, professional sample handling and coordinated laboratory
+                    support inside Nuno Pharmacy.
+                  </p>
+                </div>
+              </article>
+            </Reveal>
+            <Reveal delay={80}>
+              <article className="flex h-full items-center gap-4 rounded-[var(--radius-2xl)] border border-[#2BB673]/25 bg-[#EAF9F2] p-5 shadow-soft card-lift">
+                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-[#2BB673]/15 text-[#2BB673]">
+                  <Headset className="h-8 w-8" />
+                </div>
+                <div>
+                  <p className="font-display text-lg font-semibold text-foreground">24/7 Support</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    Our care team is available around the clock for bookings, guidance and urgent
+                    pharmacy inquiries.
+                  </p>
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-[#2BB673]">
+                    <Clock3 className="h-4 w-4" />
+                    Always available · Call 0703244711
+                  </p>
+                </div>
+              </article>
+            </Reveal>
+          </div>
           <div className="grid gap-3 lg:grid-cols-3">
             {featuredServices.map((service, index) => (
               <Reveal key={service.id} delay={index * 50}>
-                <article className="rounded-2xl border border-border bg-card p-3 shadow-soft card-lift">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-1">
-                      <Badge className="uppercase" variant="secondary">
-                        {formatServiceType(service.type)}
-                      </Badge>
-                      <Badge className="uppercase" variant={getStatusVariant(service.status)}>
-                        {service.status}
-                      </Badge>
-                    </div>
+                <article className="rounded-2xl border border-border bg-card p-4 shadow-soft card-lift">
+                  <div className="flex items-start justify-between gap-3">
+                    <ServiceIcon iconUrl={service.icon_url} alt={service.name} />
                     <button
                       type="button"
                       onClick={() => setSelectedService(service)}
@@ -313,41 +310,18 @@ function ServicesPage() {
                       <Eye className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="mt-3 overflow-hidden rounded-xl border border-border bg-muted/50">
-                    {service.image_urls?.[0] ? (
-                      <img
-                        src={service.image_urls[0]}
-                        alt={service.name}
-                        className="aspect-[16/10] w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex aspect-[16/10] items-center justify-center text-muted-foreground">
-                        <ImageIcon className="h-10 w-10" />
-                      </div>
-                    )}
-                  </div>
-                  <h2 className="mt-2 font-display text-lg font-semibold truncate whitespace-nowrap">
-                    {service.name}
-                  </h2>
-                  <p className="mt-1 text-sm leading-snug text-muted-foreground">
-                    {service.description.split("\n")[0]}
-                  </p>
-                  <div className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                  <h2 className="mt-4 font-display text-lg font-semibold">{service.name}</h2>
+                  <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
                     <div>
-                      <span className="font-semibold text-foreground">Price:</span> KES{" "}
-                      {service.price_kes}
+                      <span className="font-semibold text-foreground">Price:</span>{" "}
+                      {formatServicePrice(service.price_kes)}
                     </div>
                     <div>
-                      <span className="font-semibold text-foreground">Duration:</span>{" "}
-                      {service.duration_minutes} min
-                    </div>
-                    <div>
-                      <span className="font-semibold text-foreground">Location:</span>{" "}
-                      {formatServiceLocation(service.location)}
+                      <span className="font-semibold text-foreground">TAT:</span>{" "}
+                      {formatServiceTat(service.duration_minutes)}
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => openQuickBookingDialog(service, "call")}
@@ -372,6 +346,44 @@ function ServicesPage() {
         </div>
       </section>
 
+      <section className="pb-8">
+        <div className="mx-auto max-w-6xl px-4 md:px-6">
+          <Reveal>
+            <article className="rounded-[var(--radius-3xl)] border border-border bg-card p-6 shadow-soft card-lift md:p-8">
+              <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                <div className="flex gap-4">
+                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                    <Package className="h-7 w-7" />
+                  </div>
+                  <div className="max-w-2xl">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+                      Wellness Packages
+                    </span>
+                    <h2 className="mt-3 font-display text-2xl font-bold text-foreground md:text-3xl">
+                      We also offer various service packages
+                    </h2>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
+                      Explore comprehensive wellness and health check packages designed for early
+                      detection and proactive care — from full body checks to specialized panels for
+                      every stage of life.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="https://www.pathcarekenya.com/wellness-packages/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full btn-gradient px-6 py-3 text-sm font-display font-semibold"
+                >
+                  Read more
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </div>
+            </article>
+          </Reveal>
+        </div>
+      </section>
+
       <Dialog
         open={Boolean(selectedService)}
         onOpenChange={(open) => !open && setSelectedService(null)}
@@ -382,39 +394,12 @@ function ServicesPage() {
             <DialogDescription>Detailed information about this service offering.</DialogDescription>
           </DialogHeader>
           {selectedService ? (
-            <div className="mt-4 space-y-3 text-sm text-muted-foreground">
-              {selectedService?.image_urls?.length ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {selectedService.image_urls.map((url, index) => (
-                    <img
-                      key={`${url}-${index}`}
-                      src={url}
-                      alt={`${selectedService.name} ${index + 1}`}
-                      className="h-40 w-full rounded-2xl border border-border object-cover"
-                    />
-                  ))}
-                </div>
-              ) : null}
-              <div className="rounded-2xl border border-border bg-muted/40 p-4">
-                <p className="font-semibold text-foreground">Overview</p>
-                <p className="mt-2 leading-snug">{selectedService.description}</p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 space-y-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-4">
+                <ServiceIcon iconUrl={selectedService.icon_url} alt={selectedService.name} size="lg" />
                 <div>
-                  <p className="font-semibold text-foreground">Type</p>
-                  <p className="mt-1">{formatServiceType(selectedService.type)}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Location</p>
-                  <p className="mt-1">{formatServiceLocation(selectedService.location)}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Price</p>
-                  <p className="mt-1">KES {selectedService.price_kes}</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Duration</p>
-                  <p className="mt-1">{selectedService.duration_minutes} min</p>
+                  <p className="font-semibold text-foreground">{selectedService.name}</p>
+                  <p className="mt-1">{formatServicePrice(selectedService.price_kes)} · TAT {formatServiceTat(selectedService.duration_minutes)}</p>
                 </div>
               </div>
             </div>

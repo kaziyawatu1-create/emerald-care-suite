@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon, Gift, CalendarDays, FileText } from "lucide-react";
+import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilLine, AlertCircle, Search, Loader2, ImageIcon, Gift, CalendarDays, FileText, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listOffers, removeOffer, upsertOffer } from "../lib/offers.functions";
@@ -9,7 +9,7 @@ import { listServices, removeService, upsertService, uploadServiceImage } from "
 import { listBookings, updateBooking } from "../lib/bookings.functions";
 import { listPrescriptions } from "../lib/prescriptions.functions";
 import { listBrands, listProductCategories, listProducts, removeBrand, removeCategory, removeProduct, uploadProductImage, upsertBrand, upsertCategory, upsertProduct } from "../lib/shop.functions";
-import { formatServiceLocation, formatServiceType, readServices, writeServices, type ServiceItem, type ServiceLocation, type ServiceStatus, type ServiceType } from "../lib/services";
+import { formatServicePrice, formatServiceTat, readServices, writeServices, type ServiceItem } from "../lib/services";
 import type { BookingItem, BookingStatus } from "../lib/bookings";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 
@@ -79,14 +79,9 @@ type OfferForm = {
 
 type ServiceForm = {
   name: string;
-  description: string;
-  type: ServiceType;
-  location: ServiceLocation;
   price_kes: number;
   duration_minutes: number;
-  test_results: string;
-  status: ServiceStatus;
-  image_urls: string[];
+  icon_url: string | null;
 };
 type AdminView = "dashboard" | "products" | "categories" | "brands" | "offers" | "services" | "bookings" | "orders" | "prescriptions" | "security";
 
@@ -217,14 +212,9 @@ function DashboardPage() {
   const [offerSelectedProductId, setOfferSelectedProductId] = useState<string | null>(null);
   const [serviceForm, setServiceForm] = useState<ServiceForm>({
     name: "",
-    description: "",
-    type: "inhouse",
-    location: "lab-only",
     price_kes: 0,
     duration_minutes: 30,
-    test_results: "",
-    status: "active",
-    image_urls: [],
+    icon_url: null,
   });
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
@@ -648,14 +638,9 @@ function DashboardPage() {
   function resetServiceForm() {
     setServiceForm({
       name: "",
-      description: "",
-      type: "inhouse",
-      location: "lab-only",
       price_kes: 0,
       duration_minutes: 30,
-      test_results: "",
-      status: "active",
-      image_urls: [],
+      icon_url: null,
     });
     setEditingServiceId(null);
     setServiceDialogOpen(false);
@@ -666,14 +651,9 @@ function DashboardPage() {
       setEditingServiceId(service.id);
       setServiceForm({
         name: service.name,
-        description: service.description,
-        type: service.type,
-        location: service.location,
         price_kes: service.price_kes,
         duration_minutes: service.duration_minutes,
-        test_results: service.test_results,
-        status: service.status,
-        image_urls: service.image_urls ?? [],
+        icon_url: service.icon_url ?? null,
       });
     } else {
       resetServiceForm();
@@ -710,14 +690,9 @@ function DashboardPage() {
         data: {
           id: editingServiceId ?? undefined,
           name: serviceForm.name.trim(),
-          description: serviceForm.description.trim(),
-          type: serviceForm.type,
-          location: serviceForm.location,
           price_kes: serviceForm.price_kes,
           duration_minutes: serviceForm.duration_minutes,
-          test_results: serviceForm.test_results.trim(),
-          status: serviceForm.status,
-          image_urls: serviceForm.image_urls.slice(0, 2),
+          icon_url: serviceForm.icon_url,
         },
       })) as ServiceItem;
 
@@ -737,62 +712,45 @@ function DashboardPage() {
   }
 
   async function handleServiceImageChange(files: FileList | File | null | undefined) {
-    const fileList = files instanceof File ? [files] : files;
-    if (!fileList?.length) return;
+    const file = files instanceof File ? files : files?.[0];
+    if (!file) return;
 
-    const currentImages = serviceForm.image_urls ?? [];
-    const remainingSlots = 2 - currentImages.length;
-    if (remainingSlots <= 0) {
-      toast.error("You can attach up to 2 images per service.");
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Icon is too large. Please choose a file under 2MB.");
       return;
     }
 
-    const selectedFiles = Array.from(fileList).slice(0, remainingSlots);
-    if (!selectedFiles.length) return;
-
-    const uploadedUrls: string[] = [];
     setUploadingServiceImages(true);
 
     try {
-      for (const file of selectedFiles) {
-        if (file.size > 2 * 1024 * 1024) {
-          toast.error("One or more images are too large. Please choose files under 2MB.");
-          continue;
-        }
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
+        reader.readAsDataURL(file);
+      });
 
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-          reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
-          reader.readAsDataURL(file);
-        });
+      if (!dataUrl) return;
 
-        if (!dataUrl) continue;
+      const uploaded = (await uploadServiceImageFn({
+        data: { data_url: dataUrl, filename: file.name },
+      })) as { url?: string } | null;
 
-        const uploaded = (await uploadServiceImageFn({ data: { data_url: dataUrl, filename: file.name } })) as { url?: string } | null;
-        if (uploaded?.url) {
-          uploadedUrls.push(uploaded.url);
-        }
-      }
-
-      if (uploadedUrls.length > 0) {
-        setServiceForm((prev) => ({
-          ...prev,
-          image_urls: [...(prev.image_urls ?? []), ...uploadedUrls].slice(0, 2),
-        }));
-        toast.success("Service images uploaded and attached.");
+      if (uploaded?.url) {
+        setServiceForm((prev) => ({ ...prev, icon_url: uploaded.url! }));
+        toast.success("Service icon uploaded.");
       }
     } catch (error) {
-      toast.error(`Could not upload service image: ${error instanceof Error ? error.message : "Unknown error"}`);
+      toast.error(`Could not upload service icon: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setUploadingServiceImages(false);
     }
   }
 
-  function handleRemoveServiceImage(index: number) {
+  function handleRemoveServiceImage() {
     setServiceForm((prev) => ({
       ...prev,
-      image_urls: (prev.image_urls ?? []).filter((_, imageIndex) => imageIndex !== index),
+      icon_url: null,
     }));
   }
 
@@ -1643,12 +1601,10 @@ function DashboardPage() {
                     <table className="min-w-full divide-y divide-border text-sm">
                       <thead>
                         <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Icon</th>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Name</th>
-                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Type</th>
-                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Location</th>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Price</th>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Duration</th>
-                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Status</th>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Actions</th>
                         </tr>
                       </thead>
@@ -1656,18 +1612,19 @@ function DashboardPage() {
                         {services.map((service) => (
                           <tr key={service.id} className="bg-background">
                             <td className="px-4 py-3">
-                              <div className="font-semibold">{service.name}</div>
-                              <div className="mt-1 text-xs text-muted-foreground">{service.description}</div>
+                              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-primary/10 text-primary">
+                                {service.icon_url ? (
+                                  <img src={service.icon_url} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                  <FlaskConical className="h-4 w-4" />
+                                )}
+                              </div>
                             </td>
-                            <td className="px-4 py-3 uppercase tracking-[0.2em] text-xs text-primary">{formatServiceType(service.type)}</td>
-                            <td className="px-4 py-3 uppercase tracking-[0.2em] text-xs text-primary">{formatServiceLocation(service.location)}</td>
-                            <td className="px-4 py-3">KES {service.price_kes}</td>
-                            <td className="px-4 py-3">{service.duration_minutes} min</td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${service.status === "active" ? "bg-emerald-100 text-emerald-700" : service.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>
-                                {service.status}
-                              </span>
+                              <div className="font-semibold">{service.name}</div>
                             </td>
+                            <td className="px-4 py-3">{formatServicePrice(service.price_kes)}</td>
+                            <td className="px-4 py-3">{formatServiceTat(service.duration_minutes)}</td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-2">
                                 <button onClick={() => openServiceDialog(service)} className="rounded-full border border-border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
@@ -1881,43 +1838,17 @@ function DashboardPage() {
               <DialogDescription>Add or update a service offering for the services page.</DialogDescription>
             </DialogHeader>
             <form id="service-form" onSubmit={handleSaveService} className="mt-4 space-y-4">
-<div className="grid gap-4 sm:grid-cols-3">
-                  <label className="block text-sm font-medium">
-                    Service name
-                    <input
-                      value={serviceForm.name}
-                      onChange={(e) => setServiceForm((prev) => ({ ...prev, name: e.target.value }))}
-                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
-                      required
-                    />
-                  </label>
-                  <label className="block text-sm font-medium">
-                    Type
-                    <select
-                      value={serviceForm.type}
-                      onChange={(e) => setServiceForm((prev) => ({ ...prev, type: e.target.value as ServiceType }))}
-                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
-                    >
-                      <option value="inhouse">In-house</option>
-                      <option value="at-home">At home</option>
-                      <option value="hybrid">Hybrid</option>
-                    </select>
-                  </label>
-                  <label className="block text-sm font-medium">
-                    Location
-                    <select
-                      value={serviceForm.location}
-                      onChange={(e) => setServiceForm((prev) => ({ ...prev, location: e.target.value as ServiceLocation }))}
-                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
-                    >
-                      <option value="lab-only">Lab only</option>
-                      <option value="office">Office visit</option>
-                      <option value="home">Home visit</option>
-                  </select>
-                </label>
-              </div>
+              <label className="block text-sm font-medium">
+                Service name
+                <input
+                  value={serviceForm.name}
+                  onChange={(e) => setServiceForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                  required
+                />
+              </label>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium">
                   Price (KES)
                   <input
@@ -1940,60 +1871,40 @@ function DashboardPage() {
                     required
                   />
                 </label>
-                <label className="block text-sm font-medium">
-                  Status
-                  <select
-                    value={serviceForm.status}
-                    onChange={(e) => setServiceForm((prev) => ({ ...prev, status: e.target.value as ServiceStatus }))}
-                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
-                  >
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </label>
               </div>
 
               <label className="block text-sm font-medium">
-                Description
-                <textarea
-                  value={serviceForm.description}
-                  onChange={(e) => setServiceForm((prev) => ({ ...prev, description: e.target.value }))}
-                  className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3"
-                />
-              </label>
-
-              <label className="block text-sm font-medium">
-                Service images (max 2)
+                Service icon
                 <input
                   type="file"
                   accept="image/*"
-                  multiple
-                  disabled={uploadingServiceImages || (serviceForm.image_urls?.length ?? 0) >= 2}
+                  disabled={uploadingServiceImages || Boolean(serviceForm.icon_url)}
                   onChange={(event) => {
                     handleServiceImageChange(event.target.files);
                     event.target.value = "";
                   }}
                   className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3"
                 />
-                <p className="mt-2 text-xs text-muted-foreground">The first image will be shown on the public service cards.</p>
+                <p className="mt-2 text-xs text-muted-foreground">Upload one icon. It appears in a circle on service cards.</p>
               </label>
 
-              {serviceForm.image_urls?.length ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {serviceForm.image_urls.map((url, index) => (
-                    <div key={`${url}-${index}`} className="overflow-hidden rounded-2xl border border-border bg-background">
-                      <img src={url} alt={`Service preview ${index + 1}`} className="h-32 w-full object-cover" />
-                      <div className="flex items-center justify-between px-3 py-2 text-sm">
-                        <span className="text-muted-foreground">Image {index + 1}</span>
-                        <button type="button" onClick={() => handleRemoveServiceImage(index)} className="font-semibold text-destructive">
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              {serviceForm.icon_url ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-border bg-muted/40">
+                    <img src={serviceForm.icon_url} alt="Service icon preview" className="h-full w-full object-cover" />
+                  </div>
+                  <button type="button" onClick={handleRemoveServiceImage} className="text-sm font-semibold text-destructive">
+                    Remove icon
+                  </button>
                 </div>
-              ) : null}
+              ) : (
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-border bg-primary/10 text-primary">
+                    <FlaskConical className="h-6 w-6" />
+                  </div>
+                  Default laboratory icon will be used
+                </div>
+              )}
             </form>
             <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button type="button" onClick={resetServiceForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
