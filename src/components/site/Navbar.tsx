@@ -193,7 +193,7 @@ export function Navbar() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
               <Sparkles className="h-3.5 w-3.5" />
-              Free delivery for orders within Nairobi
+              Free delivery within Nairobi for orders above KES 3,000
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -201,10 +201,10 @@ export function Navbar() {
               <Phone className="h-3.5 w-3.5" /> +254 703 244 711
             </a>|
              <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
-              <Headset className="h-3.5 w-3.5" /> 0111121500
+              <Phone className="h-3.5 w-3.5" /> +254 703 244 711
             </a>|
-            <a href="mailto:nunopharmacy@gmail.com" className="inline-flex items-center gap-1.5 hover:opacity-90">
-              <Mail className="h-3.5 w-3.5" /> nunopharmacy@gmail.com
+            <a href="mailto:nunopharmaceutical@gmail.com" className="inline-flex items-center gap-1.5 hover:opacity-90">
+              <Mail className="h-3.5 w-3.5" /> nunopharmaceutical@gmail.com
             </a>
           </div>
         </div>
@@ -231,7 +231,7 @@ export function Navbar() {
                 <button aria-label="Toggle menu" onClick={() => setOpen((v) => !v)} className="lg:hidden grid h-10 w-10 place-items-center rounded-full border border-border bg-background">{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
               </div>
 
-              <nav className="hidden lg:flex items-center justify-end gap-1 flex-wrap rounded-full bg-[#0047AB]/90 backdrop-blur px-2 py-1 border border-[#0047AB]/40 text-white">
+              <nav className="hidden lg:flex items-center justify-end gap-1 flex-wrap rounded-full bg-primary/95 backdrop-blur px-2 py-1 border border-primary/40 text-white">
                 {links.map((l) => {
                   const iconMap: Record<string, React.ReactElement> = {
                     "/": <Sparkles className="h-4 w-4" />,
@@ -284,7 +284,7 @@ export function Navbar() {
                     )}
                   </div>
                 </div>
-                <Link to="/laboratory" className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-white/15 transition hover:bg-white/20 font-display">
+                <Link to="/services" className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-white/15 transition hover:bg-white/20 font-display">
                   <Stethoscope className="h-4 w-4" />
                   Book Appointment
                 </Link>
@@ -425,7 +425,7 @@ export function Navbar() {
               </div>
             </div>
             <Link to="/shop" onClick={() => setOpen(false)} className="mt-2 rounded-full btn-gradient px-5 py-3 text-center text-sm font-semibold font-display">Shop Medicine</Link>
-            <Link to="/laboratory" onClick={() => setOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/15 font-display">
+            <Link to="/services" onClick={() => setOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/15 font-display">
               <Stethoscope className="h-4 w-4" />
               Book a Test
             </Link>

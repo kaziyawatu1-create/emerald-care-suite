@@ -41,7 +41,7 @@ function formatKES(value: number | string) {
 }
 
 function getMailConfig() {
-  const contactEmail = process.env.CONTACT_EMAIL ?? "mmuthamacollins90@gmail.com";
+  const contactEmail = process.env.CONTACT_EMAIL ?? "nunopharmaceutical@gmail.com";
   const smtpHost = process.env.SMTP_HOST ?? "smtp.gmail.com";
   const smtpPort = Number(process.env.SMTP_PORT ?? 587);
   const smtpUser = process.env.SMTP_USER ?? contactEmail;

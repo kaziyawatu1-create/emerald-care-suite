@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Facebook, Instagram, Twitter, Linkedin, Phone, Mail, MapPin, Clock } from "lucide-react";
+import { Facebook, Instagram, Twitter, Linkedin, MessageCircle, Phone, Mail, MapPin, Clock } from "lucide-react";
 import logoImage from "@/assets/Logo.png";
 
 export function Footer() {
@@ -41,7 +41,8 @@ export function Footer() {
           <h4 className="font-display font-semibold mb-4">Contact</h4>
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex gap-2.5"><Phone className="h-4 w-4 text-primary mt-0.5" /> 0703244711</li>
-            <li className="flex gap-2.5"><Mail className="h-4 w-4 text-primary mt-0.5" /> mmuthamacollins90@gmail.com</li>
+            <li className="flex gap-2.5"><Mail className="h-4 w-4 text-primary mt-0.5" /> nunopharmaceutical@gmail.com</li>
+            <li className="flex gap-2.5"><MessageCircle className="h-4 w-4 text-primary mt-0.5" /> <a href="https://www.tiktok.com/@nunopharma" target="_blank" rel="noreferrer" className="hover:text-primary">@nunopharma</a></li>
             <li className="flex gap-2.5"><MapPin className="h-4 w-4 text-primary mt-0.5" /> Kenya, Nairobi, South C, opposite Midad Academy, off Popo Road</li>
             <li className="flex gap-2.5"><Clock className="h-4 w-4 text-primary mt-0.5" /> Mon–Sun · 7:00 — 22:00</li>
           </ul>

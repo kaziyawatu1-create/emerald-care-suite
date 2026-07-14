@@ -270,7 +270,7 @@ const laboratoryBookingSchema = z.object({
 export const bookLaboratoryTest = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => laboratoryBookingSchema.parse(input))
   .handler(async ({ data }) => {
-    const contactEmail = process.env.CONTACT_EMAIL ?? "mmuthamacollins90@gmail.com";
+    const contactEmail = process.env.CONTACT_EMAIL ?? "nunopharmaceutical@gmail.com";
     const phone = normalizeKenyanPhone(data.patient_phone);
     if (!phone) {
       throw new Error("Invalid Kenyan phone number. Use format 07XXXXXXXX or +2547XXXXXXXX.");
@@ -321,6 +321,7 @@ const placeOrderSchema = z.object({
   customer_email: z.string().email().max(160).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
   delivery_address: z.string().min(5).max(500),
   notes: z.string().max(500).optional(),
+  delivery_fee_kes: z.number().int().min(0).max(50000),
   payment_method: z.enum(["mpesa", "cod"]),
   items: z.array(cartItemSchema).min(1).max(50),
 });
@@ -354,7 +355,7 @@ export const placeOrder = createServerFn({ method: "POST" })
     });
 
     const subtotal = itemsWithPrice.reduce((s, i) => s + i.subtotal_kes, 0);
-    const delivery_fee = 0;
+    const delivery_fee = Math.max(0, data.delivery_fee_kes);
     const total = subtotal + delivery_fee;
 
     const phone = normalizeKenyanPhone(data.customer_phone);
@@ -385,7 +386,7 @@ export const placeOrder = createServerFn({ method: "POST" })
 
     try {
       await sendOrderReceiptEmail({
-        to: data.customer_email ?? process.env.CONTACT_EMAIL ?? "mmuthamacollins90@gmail.com",
+        to: data.customer_email ?? process.env.CONTACT_EMAIL ?? "nunopharmaceutical@gmail.com",
         order: {
           order_number: order.order_number,
           customer_name: data.customer_name,

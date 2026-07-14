@@ -1,9 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Check, ArrowRight } from "lucide-react";
+import { Check, ArrowRight, ImageIcon, Phone, MessageCircle } from "lucide-react";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { createBooking } from "../lib/bookings.functions";
 import { listServices } from "../lib/services.functions";
 import type { ServiceItem } from "../lib/services";
@@ -12,9 +20,16 @@ export const Route = createFileRoute("/laboratory")({
   head: () => ({
     meta: [
       { title: "Laboratory Services | Nuno Pharmacy" },
-      { name: "description", content: "Modern laboratory testing including HIV, blood sugar, malaria, H. pylori, blood grouping and sample collection." },
+      {
+        name: "description",
+        content:
+          "Modern laboratory testing including HIV, blood sugar, malaria, H. pylori, blood grouping and sample collection.",
+      },
       { property: "og:title", content: "Nuno Pharmacy Laboratory Services" },
-      { property: "og:description", content: "Reliable diagnostic services with home and office sample collection." },
+      {
+        property: "og:description",
+        content: "Reliable diagnostic services with home and office sample collection.",
+      },
     ],
   }),
   component: LaboratoryPage,
@@ -47,9 +62,25 @@ function LaboratoryPage() {
     appointment_time: "",
     notes: "",
   });
-  const [status, setStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({ type: "idle", message: "" });
+  const [status, setStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({
+    type: "idle",
+    message: "",
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
+  const [quickBookingOpen, setQuickBookingOpen] = useState(false);
+  const [quickBookingMode, setQuickBookingMode] = useState<"call" | "whatsapp">("call");
+  const [quickBookingService, setQuickBookingService] = useState("");
+  const [quickBookingForm, setQuickBookingForm] = useState({
+    customer_name: "",
+    customer_phone: "",
+    customer_email: "",
+  });
+  const [quickBookingStatus, setQuickBookingStatus] = useState<{
+    type: "idle" | "success" | "error";
+    message: string;
+  }>({ type: "idle", message: "" });
+  const [isSubmittingQuickBooking, setIsSubmittingQuickBooking] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -81,9 +112,17 @@ function LaboratoryPage() {
   ];
 
   const isContactStepValid = form.customer_name.trim() !== "" && form.customer_phone.trim() !== "";
-  const isServiceStepValid = form.service.trim() !== "" && form.booking_type.trim() !== "" && form.gender.trim() !== "";
+  const isServiceStepValid =
+    form.service.trim() !== "" && form.booking_type.trim() !== "" && form.gender.trim() !== "";
   const isAppointmentStepValid = form.appointment_date !== "" && form.appointment_time !== "";
-  const isCurrentStepValid = bookingStep === 1 ? isContactStepValid : bookingStep === 2 ? isServiceStepValid : bookingStep === 3 ? isAppointmentStepValid : true;
+  const isCurrentStepValid =
+    bookingStep === 1
+      ? isContactStepValid
+      : bookingStep === 2
+        ? isServiceStepValid
+        : bookingStep === 3
+          ? isAppointmentStepValid
+          : true;
 
   const goToNextStep = () => {
     if (bookingStep < bookingSteps.length) {
@@ -94,6 +133,70 @@ function LaboratoryPage() {
   const goToPreviousStep = () => {
     if (bookingStep > 1) {
       setBookingStep((current) => current - 1);
+    }
+  };
+
+  const openQuickBookingDialog = (serviceName: string, mode: "call" | "whatsapp") => {
+    setQuickBookingService(serviceName);
+    setQuickBookingMode(mode);
+    setQuickBookingForm({ customer_name: "", customer_phone: "", customer_email: "" });
+    setQuickBookingStatus({ type: "idle", message: "" });
+    setQuickBookingOpen(true);
+  };
+
+  const resetQuickBookingDialog = () => {
+    setQuickBookingOpen(false);
+    setQuickBookingService("");
+    setQuickBookingForm({ customer_name: "", customer_phone: "", customer_email: "" });
+    setQuickBookingStatus({ type: "idle", message: "" });
+    setIsSubmittingQuickBooking(false);
+  };
+
+  const handleQuickBookingSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!quickBookingService) return;
+
+    setIsSubmittingQuickBooking(true);
+    setQuickBookingStatus({ type: "idle", message: "" });
+
+    try {
+      const booking = await bookTestFn({
+        data: {
+          service: quickBookingService,
+          customer_name: quickBookingForm.customer_name.trim(),
+          customer_phone: quickBookingForm.customer_phone.trim(),
+          customer_email: quickBookingForm.customer_email.trim(),
+          date_of_birth: new Date().toISOString().slice(0, 10),
+          gender: "other",
+          booking_type: "lab",
+          appointment_date: new Date().toISOString().slice(0, 10),
+          appointment_time: "09:00",
+          notes: `Quick booking via ${quickBookingMode === "call" ? "phone call" : "WhatsApp"}.`,
+        },
+      });
+
+      setQuickBookingStatus({
+        type: "success",
+        message: `Booking saved. Reference ${booking.booking_number}.`,
+      });
+      setQuickBookingOpen(false);
+
+      const redirectTarget =
+        quickBookingMode === "call"
+          ? "tel:0111121500"
+          : `https://wa.me/254111121500?text=${encodeURIComponent(
+              `Hello Nuno Pharmacy, I would like to book the ${quickBookingService} service. My name is ${quickBookingForm.customer_name.trim()} and my phone number is ${quickBookingForm.customer_phone.trim()}.`,
+            )}`;
+
+      window.location.href = redirectTarget;
+    } catch (error) {
+      setQuickBookingStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to save your booking request.",
+      });
+    } finally {
+      setIsSubmittingQuickBooking(false);
     }
   };
 
@@ -109,11 +212,27 @@ function LaboratoryPage() {
     setIsSubmitting(true);
     try {
       const booking = await bookTestFn({ data: form });
-      setStatus({ type: "success", message: `Booking request submitted! Your booking number is ${booking.booking_number}.` });
-      setForm((current) => ({ ...current, customer_name: "", customer_phone: "", customer_email: "", date_of_birth: "", appointment_date: "", appointment_time: "", notes: "", service: services[0]?.name ?? "" }));
+      setStatus({
+        type: "success",
+        message: `Booking request submitted! Your booking number is ${booking.booking_number}.`,
+      });
+      setForm((current) => ({
+        ...current,
+        customer_name: "",
+        customer_phone: "",
+        customer_email: "",
+        date_of_birth: "",
+        appointment_date: "",
+        appointment_time: "",
+        notes: "",
+        service: services[0]?.name ?? "",
+      }));
       setBookingStep(1);
     } catch (error) {
-      setStatus({ type: "error", message: error instanceof Error ? error.message : "Unable to submit your booking request." });
+      setStatus({
+        type: "error",
+        message: error instanceof Error ? error.message : "Unable to submit your booking request.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -126,26 +245,150 @@ function LaboratoryPage() {
         title="Reliable laboratory diagnostics with professional care"
         subtitle="Every test is handled with speed, precision and clear communication — from in-house diagnostics to home and office sample collection."
       >
-        <a href="#book-test" className="inline-flex rounded-full btn-gradient px-7 py-3.5 text-sm font-display font-semibold">
-          Book Test
-        </a>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <a
+            href="#book-test"
+            className="inline-flex rounded-full btn-gradient px-7 py-3.5 text-sm font-display font-semibold"
+          >
+            Book Online
+          </a>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => openQuickBookingDialog("Laboratory Services", "call")}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-6 py-3.5 text-sm font-display font-semibold text-foreground transition hover:border-primary hover:text-primary"
+            >
+              <Phone className="h-4 w-4" />
+              Call 0111121500
+            </button>
+            <button
+              type="button"
+              onClick={() => openQuickBookingDialog("Laboratory Services", "whatsapp")}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-6 py-3.5 text-sm font-display font-semibold text-primary transition hover:bg-primary/20"
+            >
+              <MessageCircle className="h-4 w-4" />
+              WhatsApp booking
+            </button>
+          </div>
+        </div>
       </PageHeader>
+
+      <Dialog
+        open={quickBookingOpen}
+        onOpenChange={(open) => (open ? setQuickBookingOpen(true) : resetQuickBookingDialog())}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {quickBookingMode === "call" ? "Call booking request" : "WhatsApp booking request"}
+            </DialogTitle>
+            <DialogDescription>
+              Share your name and contact details. We’ll save the booking and then connect you{" "}
+              {quickBookingMode === "call" ? "by phone" : "on WhatsApp"}.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleQuickBookingSubmit} className="mt-4 space-y-4">
+            <div className="rounded-2xl border border-border bg-muted/40 p-4">
+              <div className="text-sm font-semibold text-foreground">Service</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {quickBookingService || "Selected service"}
+              </p>
+            </div>
+            <label className="block text-sm font-medium">
+              Full name
+              <input
+                value={quickBookingForm.customer_name}
+                onChange={(event) =>
+                  setQuickBookingForm((prev) => ({ ...prev, customer_name: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              Phone
+              <input
+                value={quickBookingForm.customer_phone}
+                onChange={(event) =>
+                  setQuickBookingForm((prev) => ({ ...prev, customer_phone: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                required
+              />
+            </label>
+            <label className="block text-sm font-medium">
+              Email (optional)
+              <input
+                type="email"
+                value={quickBookingForm.customer_email}
+                onChange={(event) =>
+                  setQuickBookingForm((prev) => ({ ...prev, customer_email: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+              />
+            </label>
+            {quickBookingStatus.message ? (
+              <p
+                className={`text-sm ${quickBookingStatus.type === "success" ? "text-emerald-700" : "text-destructive"}`}
+              >
+                {quickBookingStatus.message}
+              </p>
+            ) : null}
+            <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={resetQuickBookingDialog}
+                className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmittingQuickBooking}
+                className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold disabled:pointer-events-none disabled:opacity-60"
+              >
+                {isSubmittingQuickBooking
+                  ? "Saving..."
+                  : `Continue to ${quickBookingMode === "call" ? "call" : "WhatsApp"}`}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <section className="section-pad">
         <div className="mx-auto max-w-7xl px-4 md:px-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {laboratoryServices.map((service, index) => (
             <Reveal key={service.id} delay={index * 50}>
               <article className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift">
+                <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-muted/50">
+                  {service.image_urls?.[0] ? (
+                    <img
+                      src={service.image_urls[0]}
+                      alt={service.name}
+                      className="aspect-[16/10] w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex aspect-[16/10] items-center justify-center text-muted-foreground">
+                      <ImageIcon className="h-10 w-10" />
+                    </div>
+                  )}
+                </div>
                 <div>
                   <h2 className="font-display text-xl font-semibold">{service.name}</h2>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {service.description.split("\n")[0]}
+                  </p>
                 </div>
                 <div className="mt-6 grid gap-3 text-sm text-muted-foreground">
                   <div>
-                    <span className="font-semibold text-foreground">Price:</span> KES {service.price_kes}
+                    <span className="font-semibold text-foreground">Price:</span> KES{" "}
+                    {service.price_kes}
                   </div>
                   <div>
-                    <span className="font-semibold text-foreground">Duration:</span> {service.duration_minutes} min
+                    <span className="font-semibold text-foreground">Duration:</span>{" "}
+                    {service.duration_minutes} min
                   </div>
                 </div>
                 <a
@@ -171,7 +414,9 @@ function LaboratoryPage() {
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
               Included Services
             </span>
-            <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">Testing designed for convenience</h2>
+            <h2 className="mt-5 font-display text-3xl md:text-5xl font-bold">
+              Testing designed for convenience
+            </h2>
           </Reveal>
           <div className="mt-10 grid gap-4 sm:grid-cols-2">
             {laboratoryServices.map((service, index) => (
@@ -194,20 +439,31 @@ function LaboratoryPage() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
                   Laboratory booking
                 </span>
-                <h2 className="mt-5 font-display text-3xl md:text-4xl font-bold">Book your test appointment</h2>
+                <h2 className="mt-5 font-display text-3xl md:text-4xl font-bold">
+                  Book your test appointment
+                </h2>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground">
-                  Share the patient details, test type, appointment preference and we’ll contact you to confirm the booking.
+                  Share the patient details, test type, appointment preference and we’ll contact you
+                  to confirm the booking.
                 </p>
               </div>
-              <form onSubmit={handleSubmit} className="rounded-[var(--radius-3xl)] border border-border bg-card p-8 shadow-soft">
+              <form
+                onSubmit={handleSubmit}
+                className="rounded-[var(--radius-3xl)] border border-border bg-card p-8 shadow-soft"
+              >
                 <div className="rounded-3xl border border-border bg-muted/40 p-4 mb-6">
                   <div className="grid grid-cols-3 gap-3 text-sm">
                     {bookingSteps.map((step, index) => {
                       const stepIndex = index + 1;
                       const active = bookingStep === stepIndex;
                       return (
-                        <div key={step.label} className={`rounded-2xl border p-3 transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"}`}>
-                          <div className="text-xs font-semibold uppercase tracking-[0.25em]">Step {stepIndex}</div>
+                        <div
+                          key={step.label}
+                          className={`rounded-2xl border p-3 transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"}`}
+                        >
+                          <div className="text-xs font-semibold uppercase tracking-[0.25em]">
+                            Step {stepIndex}
+                          </div>
                           <div className="mt-2 font-medium">{step.label}</div>
                           <p className="mt-1 text-xs leading-snug">{step.description}</p>
                         </div>
@@ -223,7 +479,9 @@ function LaboratoryPage() {
                       <input
                         name="customer_name"
                         value={form.customer_name}
-                        onChange={(event) => setForm((current) => ({ ...current, customer_name: event.target.value }))}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, customer_name: event.target.value }))
+                        }
                         className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                         placeholder="Customer full name"
                         aria-label="Customer full name"
@@ -236,7 +494,9 @@ function LaboratoryPage() {
                         type="email"
                         name="customer_email"
                         value={form.customer_email}
-                        onChange={(event) => setForm((current) => ({ ...current, customer_email: event.target.value }))}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, customer_email: event.target.value }))
+                        }
                         className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                         placeholder="Email address"
                         aria-label="Email address"
@@ -247,7 +507,9 @@ function LaboratoryPage() {
                       <input
                         name="customer_phone"
                         value={form.customer_phone}
-                        onChange={(event) => setForm((current) => ({ ...current, customer_phone: event.target.value }))}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, customer_phone: event.target.value }))
+                        }
                         className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                         placeholder="Phone number"
                         aria-label="Phone number"
@@ -260,7 +522,9 @@ function LaboratoryPage() {
                         type="date"
                         name="date_of_birth"
                         value={form.date_of_birth}
-                        onChange={(event) => setForm((current) => ({ ...current, date_of_birth: event.target.value }))}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, date_of_birth: event.target.value }))
+                        }
                         className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                         aria-label="Date of birth"
                       />
@@ -273,7 +537,9 @@ function LaboratoryPage() {
                       <select
                         name="service"
                         value={form.service}
-                        onChange={(event) => setForm((current) => ({ ...current, service: event.target.value }))}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, service: event.target.value }))
+                        }
                         className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                         required
                       >
@@ -295,7 +561,12 @@ function LaboratoryPage() {
                       <select
                         name="booking_type"
                         value={form.booking_type}
-                        onChange={(event) => setForm((current) => ({ ...current, booking_type: event.target.value as "lab" | "home" | "office" }))}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            booking_type: event.target.value as "lab" | "home" | "office",
+                          }))
+                        }
                         className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                         required
                       >
@@ -309,7 +580,12 @@ function LaboratoryPage() {
                       <select
                         name="gender"
                         value={form.gender}
-                        onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value as "male" | "female" | "other" }))}
+                        onChange={(event) =>
+                          setForm((current) => ({
+                            ...current,
+                            gender: event.target.value as "male" | "female" | "other",
+                          }))
+                        }
                         className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                         required
                       >
@@ -328,7 +604,12 @@ function LaboratoryPage() {
                           type="date"
                           name="appointment_date"
                           value={form.appointment_date}
-                          onChange={(event) => setForm((current) => ({ ...current, appointment_date: event.target.value }))}
+                          onChange={(event) =>
+                            setForm((current) => ({
+                              ...current,
+                              appointment_date: event.target.value,
+                            }))
+                          }
                           className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                           aria-label="Preferred appointment date"
                           min={new Date().toISOString().split("T")[0]}
@@ -341,7 +622,12 @@ function LaboratoryPage() {
                           type="time"
                           name="appointment_time"
                           value={form.appointment_time}
-                          onChange={(event) => setForm((current) => ({ ...current, appointment_time: event.target.value }))}
+                          onChange={(event) =>
+                            setForm((current) => ({
+                              ...current,
+                              appointment_time: event.target.value,
+                            }))
+                          }
                           className="mt-2 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                           aria-label="Preferred appointment time"
                           required
@@ -353,29 +639,38 @@ function LaboratoryPage() {
                       <textarea
                         name="notes"
                         value={form.notes}
-                        onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, notes: event.target.value }))
+                        }
                         className="mt-2 min-h-32 w-full rounded-[var(--radius-xl)] border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
                         placeholder="Additional notes or instructions"
                         aria-label="Additional notes or instructions"
                       />
                     </label>
                     <div className="rounded-2xl border border-border bg-background p-4">
-                      <div className="text-sm font-semibold text-foreground">Review your booking</div>
+                      <div className="text-sm font-semibold text-foreground">
+                        Review your booking
+                      </div>
                       <div className="mt-3 grid gap-3 text-sm text-muted-foreground">
                         <div>
-                          <span className="font-semibold text-foreground">Test:</span> {form.service}
+                          <span className="font-semibold text-foreground">Test:</span>{" "}
+                          {form.service}
                         </div>
                         <div>
-                          <span className="font-semibold text-foreground">Type:</span> {form.booking_type}
+                          <span className="font-semibold text-foreground">Type:</span>{" "}
+                          {form.booking_type}
                         </div>
                         <div>
-                          <span className="font-semibold text-foreground">Gender:</span> {form.gender}
+                          <span className="font-semibold text-foreground">Gender:</span>{" "}
+                          {form.gender}
                         </div>
                         <div>
-                          <span className="font-semibold text-foreground">Appointment:</span> {form.appointment_date || "-"} at {form.appointment_time || "-"}
+                          <span className="font-semibold text-foreground">Appointment:</span>{" "}
+                          {form.appointment_date || "-"} at {form.appointment_time || "-"}
                         </div>
                         <div>
-                          <span className="font-semibold text-foreground">Notes:</span> {form.notes || "None"}
+                          <span className="font-semibold text-foreground">Notes:</span>{" "}
+                          {form.notes || "None"}
                         </div>
                       </div>
                     </div>
@@ -383,12 +678,20 @@ function LaboratoryPage() {
                 )}
 
                 {status.message ? (
-                  <p className={`text-sm ${status.type === "success" ? "text-emerald-600" : "text-red-600"}`}>{status.message}</p>
+                  <p
+                    className={`text-sm ${status.type === "success" ? "text-emerald-600" : "text-red-600"}`}
+                  >
+                    {status.message}
+                  </p>
                 ) : null}
 
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
                   {bookingStep > 1 ? (
-                    <button type="button" onClick={goToPreviousStep} className="rounded-full border border-border px-5 py-3 text-sm font-semibold">
+                    <button
+                      type="button"
+                      onClick={goToPreviousStep}
+                      className="rounded-full border border-border px-5 py-3 text-sm font-semibold"
+                    >
                       Back
                     </button>
                   ) : null}
@@ -397,7 +700,11 @@ function LaboratoryPage() {
                     disabled={!isCurrentStepValid || isSubmitting}
                     className="rounded-full btn-gradient px-7 py-3.5 text-sm font-display font-semibold disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {bookingStep < bookingSteps.length ? "Continue" : isSubmitting ? "Submitting..." : "Submit Booking"}
+                    {bookingStep < bookingSteps.length
+                      ? "Continue"
+                      : isSubmitting
+                        ? "Submitting..."
+                        : "Submit Booking"}
                   </button>
                 </div>
               </form>

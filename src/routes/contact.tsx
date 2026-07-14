@@ -63,23 +63,34 @@ function ContactPage() {
         <div className="mx-auto max-w-7xl px-4 md:px-8 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div className="grid gap-4">
             {[
-              [Phone, "Phone", "0703244711"],
-              [MessageCircle, "WhatsApp", "0768779649"],
-              [Mail, "Email", "mmuthamacollins90@gmail.com"],
-              [MapPin, "Location", "Kenya, Nairobi, South C, opposite Midad Academy, off Popo Road"],
-              [Clock3, "Working Hours", "Mon–Sun · 7:00 — 22:00"],
-            ].map(([Icon, label, value], index) => {
-              const Cmp = Icon as typeof Phone;
+              { icon: Phone, label: "Phone", value: "0703244711", href: "tel:+254703244711" },
+              { icon: MessageCircle, label: "WhatsApp", value: "0703244711", href: "https://wa.me/254703244711" },
+              { icon: Mail, label: "Email", value: "nunopharmaceutical@gmail.com", href: "mailto:nunopharmaceutical@gmail.com" },
+              { icon: MessageCircle, label: "TikTok", value: "@nunopharma", href: "https://www.tiktok.com/@nunopharma" },
+              { icon: MapPin, label: "Location", value: "Kenya, Nairobi, South C, opposite Midad Academy, off Popo Road" },
+              { icon: Clock3, label: "Working Hours", value: "Mon–Sun · 7:00 — 22:00" },
+            ].map((item, index) => {
+              const Cmp = item.icon as typeof Phone;
+              const content = (
+                <div>
+                  <div className="text-sm font-semibold text-muted-foreground">{item.label}</div>
+                  {item.href ? (
+                    <a href={item.href} target={item.href.startsWith("http") ? "_blank" : undefined} rel={item.href.startsWith("http") ? "noreferrer" : undefined} className="mt-1 block font-medium hover:text-primary">
+                      {item.value}
+                    </a>
+                  ) : (
+                    <div className="mt-1 font-medium">{item.value}</div>
+                  )}
+                </div>
+              );
+
               return (
-                <Reveal key={label as string} delay={index * 50}>
+                <Reveal key={item.label} delay={index * 50}>
                   <div className="flex gap-4 rounded-[var(--radius-xl)] border border-border bg-card px-5 py-5 shadow-soft card-lift">
                     <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                       <Cmp className="h-5 w-5" />
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold text-muted-foreground">{label as string}</div>
-                      <div className="mt-1 font-medium">{value as string}</div>
-                    </div>
+                    {content}
                   </div>
                 </Reveal>
               );

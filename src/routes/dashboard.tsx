@@ -5,7 +5,7 @@ import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilL
 import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listOffers, removeOffer, upsertOffer } from "../lib/offers.functions";
-import { listServices, removeService, upsertService } from "../lib/services.functions";
+import { listServices, removeService, upsertService, uploadServiceImage } from "../lib/services.functions";
 import { listBookings, updateBooking } from "../lib/bookings.functions";
 import { listPrescriptions } from "../lib/prescriptions.functions";
 import { listBrands, listProductCategories, listProducts, removeBrand, removeCategory, removeProduct, uploadProductImage, upsertBrand, upsertCategory, upsertProduct } from "../lib/shop.functions";
@@ -86,6 +86,7 @@ type ServiceForm = {
   duration_minutes: number;
   test_results: string;
   status: ServiceStatus;
+  image_urls: string[];
 };
 type AdminView = "dashboard" | "products" | "categories" | "brands" | "offers" | "services" | "bookings" | "orders" | "prescriptions" | "security";
 
@@ -198,6 +199,7 @@ function DashboardPage() {
   const updateBookingFn = useServerFn(updateBooking);
   const listPrescriptionsFn = useServerFn(listPrescriptions);
   const uploadImageFn = useServerFn(uploadProductImage);
+  const uploadServiceImageFn = useServerFn(uploadServiceImage);
 
   const [products, setProducts] = useState<ProductItem[]>(() => readCatalogProducts());
   const [categories, setCategories] = useState<CategoryItem[]>(() => readCatalogCategories());
@@ -222,6 +224,7 @@ function DashboardPage() {
     duration_minutes: 30,
     test_results: "",
     status: "active",
+    image_urls: [],
   });
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
@@ -250,6 +253,7 @@ function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingBrandLogo, setUploadingBrandLogo] = useState(false);
+  const [uploadingServiceImages, setUploadingServiceImages] = useState(false);
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -651,6 +655,7 @@ function DashboardPage() {
       duration_minutes: 30,
       test_results: "",
       status: "active",
+      image_urls: [],
     });
     setEditingServiceId(null);
     setServiceDialogOpen(false);
@@ -668,6 +673,7 @@ function DashboardPage() {
         duration_minutes: service.duration_minutes,
         test_results: service.test_results,
         status: service.status,
+        image_urls: service.image_urls ?? [],
       });
     } else {
       resetServiceForm();
@@ -711,6 +717,7 @@ function DashboardPage() {
           duration_minutes: serviceForm.duration_minutes,
           test_results: serviceForm.test_results.trim(),
           status: serviceForm.status,
+          image_urls: serviceForm.image_urls.slice(0, 2),
         },
       })) as ServiceItem;
 
@@ -727,6 +734,66 @@ function DashboardPage() {
       console.error("Failed to save service", error);
       toast.error("Unable to save service right now.");
     }
+  }
+
+  async function handleServiceImageChange(files: FileList | File | null | undefined) {
+    const fileList = files instanceof File ? [files] : files;
+    if (!fileList?.length) return;
+
+    const currentImages = serviceForm.image_urls ?? [];
+    const remainingSlots = 2 - currentImages.length;
+    if (remainingSlots <= 0) {
+      toast.error("You can attach up to 2 images per service.");
+      return;
+    }
+
+    const selectedFiles = Array.from(fileList).slice(0, remainingSlots);
+    if (!selectedFiles.length) return;
+
+    const uploadedUrls: string[] = [];
+    setUploadingServiceImages(true);
+
+    try {
+      for (const file of selectedFiles) {
+        if (file.size > 2 * 1024 * 1024) {
+          toast.error("One or more images are too large. Please choose files under 2MB.");
+          continue;
+        }
+
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+          reader.onerror = () => reject(reader.error ?? new Error("Read failed"));
+          reader.readAsDataURL(file);
+        });
+
+        if (!dataUrl) continue;
+
+        const uploaded = (await uploadServiceImageFn({ data: { data_url: dataUrl, filename: file.name } })) as { url?: string } | null;
+        if (uploaded?.url) {
+          uploadedUrls.push(uploaded.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setServiceForm((prev) => ({
+          ...prev,
+          image_urls: [...(prev.image_urls ?? []), ...uploadedUrls].slice(0, 2),
+        }));
+        toast.success("Service images uploaded and attached.");
+      }
+    } catch (error) {
+      toast.error(`Could not upload service image: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setUploadingServiceImages(false);
+    }
+  }
+
+  function handleRemoveServiceImage(index: number) {
+    setServiceForm((prev) => ({
+      ...prev,
+      image_urls: (prev.image_urls ?? []).filter((_, imageIndex) => imageIndex !== index),
+    }));
   }
 
   async function handleSaveProduct(e: React.FormEvent) {
@@ -1567,10 +1634,6 @@ function DashboardPage() {
                   </button>
                 </div>
 
-                <div className="mt-4 rounded-2xl border border-dashed border-border bg-background/70 px-4 py-3 text-sm text-muted-foreground">
-                  Add services from the popup form and manage their status, price, duration, and test results.
-                </div>
-
                 <div className="mt-6 overflow-x-auto">
                   {services.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
@@ -1901,14 +1964,36 @@ function DashboardPage() {
               </label>
 
               <label className="block text-sm font-medium">
-                Test results description
-                <textarea
-                  value={serviceForm.test_results}
-                  onChange={(e) => setServiceForm((prev) => ({ ...prev, test_results: e.target.value }))}
-                  className="mt-2 min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3"
-                  placeholder="Describe how test results are delivered or what customers can expect."
+                Service images (max 2)
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploadingServiceImages || (serviceForm.image_urls?.length ?? 0) >= 2}
+                  onChange={(event) => {
+                    handleServiceImageChange(event.target.files);
+                    event.target.value = "";
+                  }}
+                  className="mt-2 block w-full rounded-2xl border border-border bg-background px-4 py-3"
                 />
+                <p className="mt-2 text-xs text-muted-foreground">The first image will be shown on the public service cards.</p>
               </label>
+
+              {serviceForm.image_urls?.length ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {serviceForm.image_urls.map((url, index) => (
+                    <div key={`${url}-${index}`} className="overflow-hidden rounded-2xl border border-border bg-background">
+                      <img src={url} alt={`Service preview ${index + 1}`} className="h-32 w-full object-cover" />
+                      <div className="flex items-center justify-between px-3 py-2 text-sm">
+                        <span className="text-muted-foreground">Image {index + 1}</span>
+                        <button type="button" onClick={() => handleRemoveServiceImage(index)} className="font-semibold text-destructive">
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </form>
             <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button type="button" onClick={resetServiceForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>

@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
+import { ImageIcon } from "lucide-react";
 import { homeVisitImage } from "../lib/site-data";
 import { listServices } from "../lib/services.functions";
 import type { ServiceItem } from "../lib/services";
@@ -81,8 +82,17 @@ function HomeServicesPage() {
               homeServices.map((service, index) => (
                 <Reveal key={service.id} delay={index * 60}>
                   <article className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-soft card-lift">
+                    <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-muted/50">
+                      {service.image_urls?.[0] ? (
+                        <img src={service.image_urls[0]} alt={service.name} className="aspect-[16/10] w-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="flex aspect-[16/10] items-center justify-center text-muted-foreground">
+                          <ImageIcon className="h-10 w-10" />
+                        </div>
+                      )}
+                    </div>
                     <h2 className="font-display text-2xl font-bold">{service.name}</h2>
-                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{service.description}</p>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{service.description.split("\n")[0]}</p>
                   </article>
                 </Reveal>
               ))

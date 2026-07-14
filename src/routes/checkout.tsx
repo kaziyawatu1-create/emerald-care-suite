@@ -23,6 +23,7 @@ function CheckoutPage() {
   const [method, setMethod] = useState<"mpesa" | "cod">("mpesa");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const isFreeDelivery = subtotal >= 3000;
   const deliveryFee = 0;
   const total = subtotal + deliveryFee;
 
@@ -52,6 +53,7 @@ function CheckoutPage() {
           customer_email: String(fd.get("customer_email") || ""),
           delivery_address: String(fd.get("delivery_address") || ""),
           notes: String(fd.get("notes") || ""),
+          delivery_fee_kes: deliveryFee,
           payment_method: method,
           items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
         },
@@ -79,6 +81,14 @@ function CheckoutPage() {
                 <Field label="Email (optional)" name="customer_email" type="email" placeholder="you@example.com" className="sm:col-span-2" />
                 <Field label="Delivery address" name="delivery_address" required placeholder="Estate, street, house / office" className="sm:col-span-2" />
                 <Field label="Order notes (optional)" name="notes" placeholder="Landmark, delivery instructions…" className="sm:col-span-2" />
+                <div className={`sm:col-span-2 rounded-2xl border p-4 text-sm ${isFreeDelivery ? "border-primary/20 bg-primary/5 text-primary" : "border-border/80 bg-muted/30 text-muted-foreground"}`}>
+                  <p className="font-semibold">Delivery charges depend on distance.</p>
+                  <p className="mt-1">
+                    {isFreeDelivery
+                      ? "This order qualifies for free delivery because the subtotal is KES 3,000 or more."
+                      : "Delivery charges will be confirmed based on your location and distance."}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -129,7 +139,7 @@ function CheckoutPage() {
             </ul>
             <dl className="mt-4 space-y-2 text-sm border-t border-border pt-4">
               <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="font-semibold">{formatKES(subtotal)}</dd></div>
-              <div className="flex justify-between"><dt className="text-muted-foreground">Delivery</dt><dd className="font-semibold">{formatKES(deliveryFee)}</dd></div>
+              <div className="flex justify-between"><dt className="text-muted-foreground">Delivery</dt><dd className="font-semibold">{isFreeDelivery ? formatKES(deliveryFee) : "Distance-based"}</dd></div>
               <div className="flex justify-between text-base border-t border-border pt-3"><dt className="font-display font-bold">Total</dt><dd className="font-display font-bold text-primary">{formatKES(total)}</dd></div>
             </dl>
           </aside>

@@ -126,7 +126,7 @@ function buildBookingMessage(booking: BookingItem, action: BookingStatus) {
 
 async function notifyCustomer(booking: BookingItem, action: BookingStatus) {
   if (!booking.customer_email) return;
-  const contactEmail = process.env.CONTACT_EMAIL ?? "mmuthamacollins90@gmail.com";
+  const contactEmail = process.env.CONTACT_EMAIL ?? "nunopharmaceutical@gmail.com";
   const message = buildBookingMessage(booking, action);
   await sendMail({
     to: booking.customer_email,
@@ -187,7 +187,7 @@ export const createBooking = createServerFn({ method: "POST" })
     if (booking.customer_email) {
       await sendMail({
         to: booking.customer_email,
-        cc: process.env.CONTACT_EMAIL ?? "mmuthamacollins90@gmail.com",
+        cc: process.env.CONTACT_EMAIL ?? "nunopharmaceutical@gmail.com",
         subject: `Booking request received: ${booking.booking_number}`,
         text: `Hello ${booking.customer_name},\n\nYour booking request has been received. Booking number ${booking.booking_number}. We will notify you once the appointment is confirmed.\n\nThank you,\nNuno Pharmacy`,
         html: `<p>Hello ${booking.customer_name},</p><p>Your booking request has been received.</p><p><strong>Booking number:</strong> ${booking.booking_number}</p><p>We will notify you once the appointment is confirmed.</p><p>Thank you,<br/>Nuno Pharmacy</p>`,

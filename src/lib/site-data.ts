@@ -1,27 +1,27 @@
 import heroPharmacist from "../assets/hero-pharmacist.jpg";
 import serviceLab from "../assets/tech1.png";
 import servicePharmacy from "../assets/vits.jpeg";
-import serviceSkincare from "../assets/skincare.jpeg";
-import servicePerfumes from "../assets/perfumes.jpeg";
 import servicePrescription from "../assets/tech2.png";
 import homeCollection from "../assets/home.jpg";
-import labWide from "../assets/labo.png";
 import Hiv from "../assets/hiv.jpg";  
 import BloodSugar from "../assets/blood.jpeg";
 import Malaria from "../assets/malaria.jpeg";
 import Hpylori from "../assets/pylori.jpg";
-import shopWide from "../assets/hero.jpeg";
-import medineImage from "../assets/medicine.jpeg";
 import mainImage from "../assets/main.png";
 import deliveryImage from "../assets/Delivery.png";
+import PerfumeImage from "../assets/Final-perfumes.png";
+import skincareImage from "../assets/final-skincare.png";
+import medicineImage from "../assets/Med-final.png";
+import LabImage from "../assets/Lab-final.png";
 
 export const heroImage = heroPharmacist;
 export const homeVisitImage = homeCollection;
-export const labWideImage = labWide;
-export const shopWideImage = shopWide;
 export const mainHero = mainImage;
 export const deliveryHero = deliveryImage;
-
+export const perfumeHero = PerfumeImage;
+export const skincareHero = skincareImage;
+export const medicineHero = medicineImage;
+export const labHero = LabImage;
 export const whyChooseItems = [
   {
     title: "Genuine Medicines",
@@ -47,7 +47,7 @@ export const serviceCategories = [
     title: "Laboratory Services",
     description: "Rapid HIV testing, blood tests, malaria testing, H. pylori testing and home sample collection.",
     image: serviceLab,
-    href: "/laboratory",
+    href: "/services",
     points: [
       "Rapid HIV Testing",
       "Accurate Blood Tests",
@@ -64,7 +64,7 @@ export const serviceCategories = [
     title: "Pharmacy",
     description: "Genuine prescription and over-the-counter medicines, routine medications, vitamins and supplements.",
     image: servicePharmacy,
-    href: "/pharmacy",
+    href: "/shop",
     points: [
       "Genuine Medicines",
       "Prescription Medicines",
@@ -91,7 +91,7 @@ export const serviceCategories = [
   {
     title: "Skincare Products",
     description: "Premium skincare including serums, cleansers, moisturizers, sunscreens and acne solutions.",
-    image: serviceSkincare,
+    image: skincareHero,
     href: "/skincare",
     points: ["Serums", "Facial Cleansers", "Moisturizers", "Sunscreens", "Acne Solutions"],
     cta: "Explore Skincare",
@@ -99,7 +99,7 @@ export const serviceCategories = [
   {
     title: "Dubai Perfumes",
     description: "Luxury fragrances, gift packages and premium collections for men, women and unisex wear.",
-    image: servicePerfumes,
+    image: perfumeHero,
     href: "/perfumes",
     points: ["Men's Fragrances", "Women's Fragrances", "Luxury Collections", "Gift Packages"],
     cta: "Explore Perfumes",
@@ -110,25 +110,25 @@ export const featuredProducts = [
   {
     title: "Medicine",
     description: "Trusted treatments, prescription support and daily health essentials.",
-    image: medineImage,
+    image: medicineHero,
     href: "/shop",
   },
   {
     title: "Skincare",
     description: "Dermatology-forward skincare curated for healthy, resilient skin.",
-    image: serviceSkincare,
+    image: skincareHero,
     href: "/shop",
   },
   {
     title: "Vitamins",
     description: "Daily wellness support with carefully selected supplements.",
-    image: servicePharmacy,
+    image: medicineHero,
     href: "/shop",
   },
   {
     title: "Perfumes",
     description: "A refined fragrance collection with elegant gift-ready presentation.",
-    image: servicePerfumes,
+    image: perfumeHero,
     href: "/shop",
   },
 ] as const;
@@ -162,7 +162,7 @@ export const laboratoryTests = [
     name: "Blood Grouping",
     description: "Accurate blood group identification for clinical and family needs.",
     price: "$7",
-    image: shopWide,
+    image: medicineHero,
   },
   {
     name: "Home Sample Collection",
@@ -226,32 +226,32 @@ export const skincareCollections = [
   {
     name: "Serums",
     description: "Targeted serums for hydration, brightening and repair to support your routine.",
-    image: serviceSkincare,
+    image: skincareHero,
   },
   {
     name: "Sensitive Care",
     description: "Gentle, barrier-supporting options formulated for sensitive and reactive skin.",
-    image: serviceSkincare,
+    image: skincareHero,
   },
   {
     name: "Face Care",
     description: "Targeted serums, cleansers and toners for clear, refreshed skin.",
-    image: serviceSkincare,
+    image: skincareHero,
   },
   {
     name: "Body Care",
     description: "Hydrating lotions and restorative care for smooth, nourished skin.",
-    image: serviceSkincare,
+    image: skincareHero,
   },
   {
     name: "Sunscreens",
     description: "Daily UV protection with lightweight textures and skincare benefits.",
-    image: serviceSkincare,
+    image: skincareHero,
   },
   {
     name: "Acne Solutions",
     description: "Problem-solving treatments for blemishes, excess oil and post-acne care.",
-    image: serviceSkincare,
+    image: skincareHero,
   },
 ] as const;
 
@@ -260,37 +260,37 @@ export const perfumeProducts = [
     name: "Royal Oud Reserve",
     category: "Men",
     description: "A deep woody fragrance with warm spice and polished amber notes.",
-    image: servicePerfumes,
+    image: perfumeHero,
   },
   {
     name: "Velvet Bloom",
     category: "Women",
     description: "A luminous floral composition with soft musk and elegant sweetness.",
-    image: servicePerfumes,
+    image: perfumeHero,
   },
   {
     name: "Desert Gold",
     category: "Unisex",
     description: "An opulent signature scent blending saffron, oud and clean musk.",
-    image: servicePerfumes,
+    image: perfumeHero,
   },
   {
     name: "Midnight Cedar",
     category: "Men",
     description: "Crisp cedar, smoky incense and velvet spice for evening wear.",
-    image: servicePerfumes,
+    image: perfumeHero,
   },
   {
     name: "Rose Mirage",
     category: "Women",
     description: "A modern rose profile enriched with pear and warm vanilla.",
-    image: servicePerfumes,
+    image: perfumeHero,
   },
   {
     name: "Amber Silk",
     category: "Unisex",
     description: "Smooth amber and resins in a luxurious everyday fragrance.",
-    image: servicePerfumes,
+    image: perfumeHero,
   },
 ] as const;
 

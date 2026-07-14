@@ -13,6 +13,7 @@ export interface ServiceItem {
   status: ServiceStatus;
   location: ServiceLocation;
   createdAt: string;
+  image_urls: string[];
 }
 
 const storageKey = "nuno-services";
@@ -29,6 +30,7 @@ const defaultServices: ServiceItem[] = [
     status: "active",
     location: "home",
     createdAt: "2026-07-04",
+    image_urls: [],
   },
   {
     id: "service-clinic-consultation",
@@ -41,6 +43,7 @@ const defaultServices: ServiceItem[] = [
     status: "active",
     location: "lab-only",
     createdAt: "2026-07-04",
+    image_urls: [],
   },
 ];
 
@@ -64,6 +67,9 @@ export function readServices(): ServiceItem[] {
       status: service.status ?? "active",
       location: service.location ?? "lab-only",
       createdAt: service.createdAt ?? new Date().toISOString().split("T")[0],
+      image_urls: Array.isArray(service.image_urls)
+        ? service.image_urls.filter((image): image is string => typeof image === "string" && image.trim().length > 0)
+        : [],
     }));
   } catch {
     return defaultServices;
