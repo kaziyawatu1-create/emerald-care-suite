@@ -84,6 +84,7 @@ function Index() {
   ];
   const marketingVideos = [clip1, clip2];
   const [activeSlide, setActiveSlide] = useState(0);
+  const [videoLayouts, setVideoLayouts] = useState<Record<string, "portrait" | "landscape">>({});
   const loadServicesFn = useServerFn(listServices);
   const bookServiceFn = useServerFn(createBooking);
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -134,6 +135,19 @@ function Index() {
     setQuickBookingForm({ customer_name: "", customer_phone: "", customer_email: "" });
     setQuickBookingStatus({ type: "idle", message: "" });
     setQuickBookingOpen(true);
+  };
+
+  const handlePromoVideoMetadata = (
+    event: React.SyntheticEvent<HTMLVideoElement>,
+    videoSource: string,
+  ) => {
+    const video = event.currentTarget;
+    const isPortrait = video.videoHeight > video.videoWidth;
+
+    setVideoLayouts((current) => ({
+      ...current,
+      [videoSource]: isPortrait ? "portrait" : "landscape",
+    }));
   };
 
   const resetQuickBookingDialog = () => {
@@ -407,22 +421,27 @@ function Index() {
 
           <Reveal delay={80}>
             <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {marketingVideos.map((video, index) => (
-                <div
-                  key={video}
-                  className="overflow-hidden rounded-[var(--radius-3xl)] border border-border bg-card shadow-soft"
-                >
-                  <video
-                    className="aspect-video h-56 w-full object-cover md:h-64"
-                    src={video}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    controls
-                  />
-                </div>
-              ))}
+              {marketingVideos.map((video) => {
+                const layout = videoLayouts[video] ?? "landscape";
+
+                return (
+                  <div
+                    key={video}
+                    className="flex items-center justify-center overflow-hidden rounded-[var(--radius-3xl)] border border-border bg-black shadow-soft"
+                  >
+                    <video
+                      className={`block bg-black object-contain ${layout === "portrait" ? "mx-auto max-h-[78vh] w-auto max-w-full" : "max-h-[70vh] w-full"}`}
+                      src={video}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      controls
+                      onLoadedMetadata={(event) => handlePromoVideoMetadata(event, video)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </Reveal>
         </div>
