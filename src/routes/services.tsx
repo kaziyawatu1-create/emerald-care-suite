@@ -367,7 +367,7 @@ function ServicesPage() {
                   </p>
                   <p className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-[#2BB673]">
                     <Clock3 className="h-4 w-4" />
-                    Always available · Call 0703244711
+                    Always available · Call 012498834
                   </p>
                 </div>
               </article>

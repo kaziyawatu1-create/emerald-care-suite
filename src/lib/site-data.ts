@@ -15,7 +15,7 @@ import medicineImage from "../assets/Med-final.png";
 import LabImage from "../assets/Lab-final.png";
 import Vitaminz from '../assets/vitamine.png';
 import Skiny from '../assets/Skinyi.png';
-import office  from '../assets/Officess.png'
+import office  from '../assets/office.png';
 
 export const heroImage = heroPharmacist;
 export const homeVisitImage = homeCollection;

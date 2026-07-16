@@ -103,6 +103,7 @@ function Index() {
   const [isSubmittingQuickBooking, setIsSubmittingQuickBooking] = useState(false);
 
   const labServices = useMemo(() => services, [services]);
+  const displayedLabServices = useMemo(() => labServices.slice(0, 4), [labServices]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -603,7 +604,7 @@ function Index() {
                   Loading laboratory services from the database...
                 </div>
               ) : (
-                labServices.map((service) => (
+                displayedLabServices.map((service) => (
                   <div
                     key={service.id}
                     className="flex h-full flex-col rounded-2xl border border-border bg-muted/40 p-6 text-sm"
@@ -624,7 +625,7 @@ function Index() {
                 to="/services"
                 className="inline-flex items-center justify-center rounded-full btn-gradient px-7 py-3.5 text-sm font-display font-semibold"
               >
-                Book Appointment
+                View all services
               </Link>
             </div>
           </Reveal>
