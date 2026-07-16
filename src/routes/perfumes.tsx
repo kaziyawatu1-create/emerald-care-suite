@@ -15,7 +15,7 @@ export const Route = createFileRoute("/perfumes")({
   head: () => ({
     meta: [
       { title: "Dubai Perfumes | Nuno Pharmacy" },
-      { name: "description", content: "Shop luxury Dubai perfumes for men, women and unisex wear. Add to cart and pay with M-Pesa or on delivery." },
+      { name: "description", content: "Shop luxury Dubai perfumes for men, women and unisex wear. Add to cart and order via WhatsApp or on delivery." },
       { property: "og:title", content: "Nuno Pharmacy Dubai Perfumes" },
       { property: "og:description", content: "Luxury fragrance collections with elegant filtering by category." },
     ],

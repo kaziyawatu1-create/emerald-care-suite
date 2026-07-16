@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Clock, XCircle, Smartphone } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, MessageCircle } from "lucide-react";
 import { z } from "zod";
 import { PageHeader } from "../components/site/PageHeader";
 import { getOrderStatus } from "../lib/shop.functions";
@@ -27,7 +27,7 @@ function OrderPage() {
       const d = q.state.data;
       if (!d) return 3000;
       if (d.order?.payment_status === "paid" || d.order?.payment_status === "failed" || d.order?.payment_status === "cancelled") return false;
-      if (d.order?.payment_method === "cod") return false;
+      if (d.order?.payment_method === "cod" || d.order?.payment_method === "whatsapp") return false;
       return 3000;
     },
   });
@@ -44,16 +44,17 @@ function OrderPage() {
   const paid = order.payment_status === "paid";
   const failed = order.payment_status === "failed" || order.payment_status === "cancelled";
   const isCOD = order.payment_method === "cod";
+  const isWhatsApp = order.payment_method === "whatsapp";
 
   return (
     <>
-      <PageHeader eyebrow={`Order ${order.order_number}`} title={paid ? "Payment received" : isCOD ? "Order confirmed" : "Waiting for payment"} />
+      <PageHeader eyebrow={`Order ${order.order_number}`} title={paid ? "Payment received" : isCOD || isWhatsApp ? "Order confirmed" : "Waiting for payment"} />
 
       <section className="section-pad">
         <div className="mx-auto max-w-3xl px-4 md:px-8">
           <div className="rounded-[var(--radius-2xl)] border border-border bg-card p-8 shadow-soft">
             <div className="flex items-center gap-3">
-              {paid || isCOD ? (
+              {paid || isCOD || isWhatsApp ? (
                 <CheckCircle2 className="h-10 w-10 text-primary" />
               ) : failed ? (
                 <XCircle className="h-10 w-10 text-destructive" />
@@ -63,25 +64,27 @@ function OrderPage() {
               <div>
                 <h2 className="font-display text-2xl font-bold">
                   {paid && "Payment received — thank you!"}
-                  {!paid && isCOD && "We received your order"}
-                  {!paid && !isCOD && !failed && "Complete payment on your phone"}
+                  {!paid && (isCOD || isWhatsApp) && "We received your order"}
+                  {!paid && !isCOD && !isWhatsApp && !failed && "Complete payment on your phone"}
                   {failed && "Payment did not complete"}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {isCOD
                     ? "You'll pay on delivery. Our team will call to confirm shortly."
-                    : paid
-                      ? `M-Pesa receipt: ${mpesa?.mpesa_receipt ?? "—"}`
-                      : failed
-                        ? mpesa?.result_desc ?? "The payment was cancelled or timed out."
-                        : msg || "Check your phone for the M-Pesa prompt and enter your PIN."}
+                    : isWhatsApp
+                      ? msg || "Your order details have been sent to WhatsApp. Please confirm the total and pay there."
+                      : paid
+                        ? `M-Pesa receipt: ${mpesa?.mpesa_receipt ?? "—"}`
+                        : failed
+                          ? mpesa?.result_desc ?? "The payment was cancelled or timed out."
+                          : msg || "Check your phone for the M-Pesa prompt and enter your PIN."}
                 </p>
               </div>
             </div>
 
-            {!paid && !failed && !isCOD && (
+            {!paid && !failed && !isCOD && !isWhatsApp && (
               <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
-                <Smartphone className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <MessageCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <p className="text-sm text-muted-foreground">
                   This page updates automatically once the payment completes. Do not close it.
                 </p>
@@ -92,7 +95,7 @@ function OrderPage() {
               <Row label="Customer" value={order.customer_name} />
               <Row label="Phone" value={order.customer_phone} />
               <Row label="Delivery" value={order.delivery_address} />
-              <Row label="Payment method" value={order.payment_method === "mpesa" ? "M-Pesa STK Push" : "Pay on Delivery"} />
+              <Row label="Payment method" value={order.payment_method === "whatsapp" ? "Order via WhatsApp" : order.payment_method === "cod" ? "Pay on Delivery" : "Order via WhatsApp"} />
               <Row label="Total" value={formatKES(Number(order.total_kes))} strong />
               <Row label="Status" value={order.order_status} />
             </dl>

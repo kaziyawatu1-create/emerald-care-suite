@@ -17,6 +17,7 @@ function mapBookingRow(row: any): BookingItem {
     gender: row.gender as BookingGender,
     appointment_date: row.appointment_date,
     appointment_time: row.appointment_time,
+    preferred_doctor: typeof row.preferred_doctor === "string" ? row.preferred_doctor : undefined,
     notes: row.notes ?? "",
     status: row.status as BookingStatus,
     createdAt: row.created_at,
@@ -31,6 +32,10 @@ const bookingRequestSchema = z.object({
   date_of_birth: z.string().min(1).refine((value) => !Number.isNaN(Date.parse(value)), { message: "Invalid date of birth" }),
   gender: z.enum(["male", "female", "other"]).optional().default("other"),
   booking_type: z.enum(["lab", "home", "office"]).optional().default("lab"),
+  preferred_doctor: z
+    .enum(["General Doctor", "Orthopedic", "Neurosurgeon", "Cardiothoracic Surgeon", "Pediatrician"])
+    .optional()
+    .default("General Doctor"),
   appointment_date: z.string().min(1).refine((value) => !Number.isNaN(Date.parse(value)), { message: "Invalid appointment date" }),
   appointment_time: z.string().min(1).max(20),
   notes: z.string().max(1000).optional().or(z.literal("")).transform((v) => (v ? v : undefined)),
@@ -52,7 +57,7 @@ function buildBookingNumber(): string {
 }
 
 function buildBookingMessage(booking: BookingItem, action: BookingStatus) {
-  const base = `Booking number: ${booking.booking_number}\nService: ${booking.service}\nAppointment: ${booking.appointment_date} at ${booking.appointment_time}\n`;
+  const base = `Booking number: ${booking.booking_number}\nService: ${booking.service}\nDoctor: ${booking.preferred_doctor ?? "General Doctor"}\nAppointment: ${booking.appointment_date} at ${booking.appointment_time}\n`;
   const detailsHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:16px 0;">
     <tr>
       <td style="padding:8px 12px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Booking number</td>
@@ -65,6 +70,10 @@ function buildBookingMessage(booking: BookingItem, action: BookingStatus) {
     <tr>
       <td style="padding:8px 12px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Booking type</td>
       <td style="padding:8px 12px;border:1px solid #e2e8f0;">${booking.booking_type}</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Preferred doctor</td>
+      <td style="padding:8px 12px;border:1px solid #e2e8f0;">${booking.preferred_doctor ?? "General Doctor"}</td>
     </tr>
     <tr>
       <td style="padding:8px 12px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Appointment date</td>
@@ -141,7 +150,7 @@ export const listBookings = createServerFn({ method: "GET" }).handler(async () =
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("bookings")
-    .select("id,booking_number,service,booking_type,customer_name,customer_phone,customer_email,date_of_birth,gender,appointment_date,appointment_time,notes,status,created_at")
+    .select("id,booking_number,service,booking_type,customer_name,customer_phone,customer_email,date_of_birth,gender,appointment_date,appointment_time,preferred_doctor,notes,status,created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -169,6 +178,7 @@ export const createBooking = createServerFn({ method: "POST" })
       customer_email: data.customer_email ?? null,
       date_of_birth: new Date(data.date_of_birth).toISOString().slice(0, 10),
       gender: data.gender ?? "other",
+      preferred_doctor: data.preferred_doctor ?? "General Doctor",
       appointment_date: new Date(data.appointment_date).toISOString().slice(0, 10),
       appointment_time: data.appointment_time,
       notes: data.notes ?? null,
@@ -178,11 +188,33 @@ export const createBooking = createServerFn({ method: "POST" })
     const { data: saved, error } = await supabaseAdmin
       .from("bookings")
       .insert(payload)
-      .select("id,booking_number,service,customer_name,customer_phone,customer_email,date_of_birth,gender,appointment_date,appointment_time,notes,status,created_at")
+      .select("id,booking_number,service,customer_name,customer_phone,customer_email,date_of_birth,gender,appointment_date,appointment_time,preferred_doctor,notes,status,created_at")
       .single();
 
     if (error) throw new Error(error.message);
     const booking = mapBookingRow(saved as any);
+
+    if (data.service === "Doctor Appointment") {
+      const appointmentPayload = {
+        appointment_number: bookingNumber,
+        service: data.service,
+        preferred_doctor: data.preferred_doctor ?? "General Doctor",
+        customer_name: data.customer_name,
+        customer_phone: phone,
+        customer_email: data.customer_email ?? null,
+        date_of_birth: new Date(data.date_of_birth).toISOString().slice(0, 10),
+        gender: data.gender ?? "other",
+        appointment_date: new Date(data.appointment_date).toISOString().slice(0, 10),
+        appointment_time: data.appointment_time,
+        notes: data.notes ?? null,
+        status: "pending",
+      } as Record<string, unknown>;
+
+      const { error: appointmentError } = await supabaseAdmin.from("doctor_appointments").insert(appointmentPayload as any);
+      if (appointmentError) {
+        console.error("Failed to save doctor appointment", appointmentError);
+      }
+    }
 
     if (booking.customer_email) {
       await sendMail({
@@ -215,7 +247,7 @@ export const updateBooking = createServerFn({ method: "POST" })
       .from("bookings")
       .update(payload)
       .eq("id", data.id)
-      .select("id,booking_number,service,customer_name,customer_phone,customer_email,date_of_birth,gender,appointment_date,appointment_time,notes,status,created_at")
+      .select("id,booking_number,service,customer_name,customer_phone,customer_email,date_of_birth,gender,appointment_date,appointment_time,preferred_doctor,notes,status,created_at")
       .single();
 
     if (error) throw new Error(error.message);

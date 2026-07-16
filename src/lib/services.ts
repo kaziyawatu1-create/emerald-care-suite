@@ -4,6 +4,7 @@ export interface ServiceItem {
   price_kes: number;
   duration_minutes: number;
   icon_url: string | null;
+  service_category_id?: string | null;
   createdAt: string;
 }
 
@@ -53,6 +54,7 @@ export function readServices(): ServiceItem[] {
           typeof service.icon_url === "string" && service.icon_url.trim()
             ? service.icon_url
             : legacyIcon,
+        service_category_id: typeof service.service_category_id === "string" ? service.service_category_id : null,
         createdAt: service.createdAt ?? new Date().toISOString().split("T")[0],
       };
     });

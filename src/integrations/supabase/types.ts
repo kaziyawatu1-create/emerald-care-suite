@@ -156,6 +156,24 @@ export type Database = {
           },
         ]
       }
+      service_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           created_at: string
@@ -164,6 +182,7 @@ export type Database = {
           name: string
           price_kes: number
           duration_minutes: number
+          service_category_id: string | null
         }
         Insert: {
           created_at?: string
@@ -172,6 +191,7 @@ export type Database = {
           name: string
           price_kes: number
           duration_minutes: number
+          service_category_id?: string | null
         }
         Update: {
           created_at?: string
@@ -180,6 +200,7 @@ export type Database = {
           name?: string
           price_kes?: number
           duration_minutes?: number
+          service_category_id?: string | null
         }
         Relationships: []
       }
@@ -197,6 +218,7 @@ export type Database = {
           gender: string
           id: string
           notes: string | null
+          preferred_doctor: string | null
           service: string
           status: string
         }
@@ -213,6 +235,7 @@ export type Database = {
           gender?: string
           id?: string
           notes?: string | null
+          preferred_doctor?: string | null
           service: string
           status?: string
         }
@@ -229,6 +252,61 @@ export type Database = {
           gender?: string
           id?: string
           notes?: string | null
+          preferred_doctor?: string | null
+          service?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      doctor_appointments: {
+        Row: {
+          appointment_date: string
+          appointment_number: string
+          appointment_time: string
+          booking_type: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          date_of_birth: string | null
+          gender: string
+          id: string
+          notes: string | null
+          preferred_doctor: string | null
+          service: string
+          status: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_number: string
+          appointment_time: string
+          booking_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          date_of_birth?: string | null
+          gender?: string
+          id?: string
+          notes?: string | null
+          preferred_doctor?: string | null
+          service: string
+          status?: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_number?: string
+          appointment_time?: string
+          booking_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          date_of_birth?: string | null
+          gender?: string
+          id?: string
+          notes?: string | null
+          preferred_doctor?: string | null
           service?: string
           status?: string
         }

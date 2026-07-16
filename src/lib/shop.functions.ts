@@ -322,7 +322,7 @@ const placeOrderSchema = z.object({
   delivery_address: z.string().min(5).max(500),
   notes: z.string().max(500).optional(),
   delivery_fee_kes: z.number().int().min(0).max(50000),
-  payment_method: z.enum(["mpesa", "cod"]),
+  payment_method: z.enum(["whatsapp", "cod"]),
   items: z.array(cartItemSchema).min(1).max(50),
 });
 
@@ -373,7 +373,7 @@ export const placeOrder = createServerFn({ method: "POST" })
         delivery_fee_kes: delivery_fee,
         total_kes: total,
         payment_method: data.payment_method,
-        payment_status: data.payment_method === "cod" ? "pending" : "pending",
+        payment_status: "pending",
       })
       .select("id,order_number,total_kes,payment_method")
       .single();
@@ -394,7 +394,7 @@ export const placeOrder = createServerFn({ method: "POST" })
           delivery_address: data.delivery_address,
           total_kes: Number(order.total_kes),
           payment_method: data.payment_method,
-          order_status: data.payment_method === "cod" ? "received" : "pending",
+          order_status: "received",
           notes: data.notes ?? null,
         },
         items: itemsWithPrice.map((item) => ({
@@ -408,24 +408,13 @@ export const placeOrder = createServerFn({ method: "POST" })
       console.error("Order receipt email failed", emailError);
     }
 
-    // Trigger STK push if M-Pesa
-    let stk: { checkout_request_id: string | null; message: string } = { checkout_request_id: null, message: "" };
-    if (data.payment_method === "mpesa") {
-      stk = await initiateStkPush({
-        orderId: order.id,
-        phone,
-        amount: Math.round(total),
-        reference: order.order_number,
-      });
-    }
-
     return {
       order_id: order.id,
       order_number: order.order_number,
       total: Number(order.total_kes),
       payment_method: order.payment_method,
-      checkout_request_id: stk.checkout_request_id,
-      mpesa_message: stk.message,
+      checkout_request_id: null,
+      mpesa_message: "",
     };
   });
 

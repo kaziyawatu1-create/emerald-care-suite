@@ -5,8 +5,9 @@ import { Package, Plus, Trash2, LogOut, ShieldCheck, ShoppingCart, Tags, PencilL
 import { toast } from "sonner";
 import { readCatalogCategories, readCatalogProducts, type CatalogCategory, type CatalogProduct } from "../lib/catalog";
 import { listOffers, removeOffer, upsertOffer } from "../lib/offers.functions";
-import { listServices, removeService, upsertService, uploadServiceImage } from "../lib/services.functions";
+import { listServiceCategories, listServices, removeService, upsertService, upsertServiceCategory, uploadServiceImage, type ServiceCategoryItem } from "../lib/services.functions";
 import { listBookings, updateBooking } from "../lib/bookings.functions";
+import { listDoctorAppointments } from "../lib/appointments.functions";
 import { listPrescriptions } from "../lib/prescriptions.functions";
 import { listBrands, listProductCategories, listProducts, removeBrand, removeCategory, removeProduct, uploadProductImage, upsertBrand, upsertCategory, upsertProduct } from "../lib/shop.functions";
 import { formatServicePrice, formatServiceTat, readServices, writeServices, type ServiceItem } from "../lib/services";
@@ -81,9 +82,14 @@ type ServiceForm = {
   name: string;
   price_kes: number;
   duration_minutes: number;
+  service_category_id: string | null;
   icon_url: string | null;
 };
-type AdminView = "dashboard" | "products" | "categories" | "brands" | "offers" | "services" | "bookings" | "orders" | "prescriptions" | "security";
+
+type ServiceCategoryForm = {
+  name: string;
+};
+type AdminView = "dashboard" | "products" | "categories" | "brands" | "offers" | "services" | "bookings" | "appointments" | "orders" | "prescriptions" | "security";
 
 const defaultOrders: OrderItem[] = [
   {
@@ -188,9 +194,12 @@ function DashboardPage() {
   const saveOfferFn = useServerFn(upsertOffer);
   const deleteOfferFn = useServerFn(removeOffer);
   const listServicesFn = useServerFn(listServices);
+  const listServiceCategoriesFn = useServerFn(listServiceCategories);
   const saveServiceFn = useServerFn(upsertService);
+  const saveServiceCategoryFn = useServerFn(upsertServiceCategory);
   const deleteServiceFn = useServerFn(removeService);
   const listBookingsFn = useServerFn(listBookings);
+  const listDoctorAppointmentsFn = useServerFn(listDoctorAppointments);
   const updateBookingFn = useServerFn(updateBooking);
   const listPrescriptionsFn = useServerFn(listPrescriptions);
   const uploadImageFn = useServerFn(uploadProductImage);
@@ -201,7 +210,9 @@ function DashboardPage() {
   const [brands, setBrands] = useState<BrandItem[]>([]);
   const [offers, setOffers] = useState<OfferItem[]>([]);
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategoryItem[]>([]);
   const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [appointments, setAppointments] = useState<BookingItem[]>([]);
   const [prescriptions, setPrescriptions] = useState<PrescriptionItem[]>([]);
   const [orders, setOrders] = useState<OrderItem[]>(() => readStorage(storageKeys.orders, defaultOrders));
   const [productForm, setProductForm] = useState<ProductForm>({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [], brand_id: null });
@@ -214,9 +225,12 @@ function DashboardPage() {
     name: "",
     price_kes: 0,
     duration_minutes: 30,
+    service_category_id: null,
     icon_url: null,
   });
+  const [serviceCategoryForm, setServiceCategoryForm] = useState<ServiceCategoryForm>({ name: "" });
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
+  const [serviceCategoryDialogOpen, setServiceCategoryDialogOpen] = useState(false);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [categorySearch, setCategorySearch] = useState("");
@@ -229,6 +243,8 @@ function DashboardPage() {
   const [bookingActionLoading, setBookingActionLoading] = useState(false);
   const [bookingSearch, setBookingSearch] = useState("");
   const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | "all">("all");
+  const [appointmentSearch, setAppointmentSearch] = useState("");
+  const [appointmentStatusFilter, setAppointmentStatusFilter] = useState<BookingStatus | "all">("all");
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [bookingNote, setBookingNote] = useState("");
@@ -244,6 +260,7 @@ function DashboardPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingBrandLogo, setUploadingBrandLogo] = useState(false);
   const [uploadingServiceImages, setUploadingServiceImages] = useState(false);
+  const [savingServiceCategory, setSavingServiceCategory] = useState(false);
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -262,10 +279,22 @@ function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    const loadServiceCategories = async () => {
+      try {
+        const rows = await listServiceCategoriesFn();
+        setServiceCategories(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        console.error("Failed to load service categories", error);
+      }
+    };
+    loadServiceCategories();
+  }, [listServiceCategoriesFn]);
+
+  useEffect(() => {
     const loadServices = async () => {
       try {
         const rows = await listServicesFn();
-        if (Array.isArray(rows) && rows.length > 0) {
+        if (Array.isArray(rows)) {
           setServices(rows);
         }
       } catch (error) {
@@ -286,8 +315,20 @@ function DashboardPage() {
         console.error("Failed to load bookings", error);
       }
     };
+    const loadAppointments = async () => {
+      try {
+        const rows = await listDoctorAppointmentsFn();
+        if (Array.isArray(rows)) {
+          setAppointments(rows);
+        }
+      } catch (error) {
+        console.error("Failed to load doctor appointments", error);
+      }
+    };
+
     loadBookings();
-  }, [listBookingsFn]);
+    loadAppointments();
+  }, [listBookingsFn, listDoctorAppointmentsFn]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -345,10 +386,11 @@ function DashboardPage() {
       { label: "Skincare", value: skincareCount, accent: "text-primary" },
       { label: "Services", value: services.length, accent: "text-primary" },
       { label: "Bookings", value: bookings.length, accent: "text-sky" },
+      { label: "Appointments", value: appointments.length, accent: "text-violet" },
       { label: "Prescriptions", value: prescriptions.length, accent: "text-cyan" },
       { label: "Orders", value: orders.length, accent: "text-foreground" },
     ];
-  }, [products, services.length, bookings.length, orders.length]);
+  }, [products, services.length, bookings.length, appointments.length, orders.length]);
 
   const filteredBookings = useMemo(() => {
     const query = bookingSearch.trim().toLowerCase();
@@ -364,6 +406,22 @@ function DashboardPage() {
       return matchesStatus && matchesSearch;
     });
   }, [bookings, bookingSearch, bookingStatusFilter]);
+
+  const filteredAppointments = useMemo(() => {
+    const query = appointmentSearch.trim().toLowerCase();
+    return appointments.filter((appointment) => {
+      const matchesStatus = appointmentStatusFilter === "all" || appointment.status === appointmentStatusFilter;
+      const matchesSearch =
+        !query ||
+        appointment.booking_number.toLowerCase().includes(query) ||
+        appointment.customer_name.toLowerCase().includes(query) ||
+        appointment.customer_phone.toLowerCase().includes(query) ||
+        appointment.customer_email?.toLowerCase().includes(query) ||
+        appointment.service.toLowerCase().includes(query) ||
+        appointment.preferred_doctor?.toLowerCase().includes(query);
+      return matchesStatus && matchesSearch;
+    });
+  }, [appointments, appointmentSearch, appointmentStatusFilter]);
 
   const filteredProducts = useMemo(() => {
     const query = productSearch.trim().toLowerCase();
@@ -640,10 +698,21 @@ function DashboardPage() {
       name: "",
       price_kes: 0,
       duration_minutes: 30,
+      service_category_id: serviceCategories[0]?.id ?? null,
       icon_url: null,
     });
     setEditingServiceId(null);
     setServiceDialogOpen(false);
+  }
+
+  function resetServiceCategoryForm() {
+    setServiceCategoryForm({ name: "" });
+    setServiceCategoryDialogOpen(false);
+  }
+
+  function openServiceCategoryDialog() {
+    setServiceCategoryForm({ name: "" });
+    setServiceCategoryDialogOpen(true);
   }
 
   function openServiceDialog(service?: ServiceItem) {
@@ -653,6 +722,7 @@ function DashboardPage() {
         name: service.name,
         price_kes: service.price_kes,
         duration_minutes: service.duration_minutes,
+        service_category_id: service.service_category_id ?? null,
         icon_url: service.icon_url ?? null,
       });
     } else {
@@ -678,6 +748,40 @@ function DashboardPage() {
     }
   }
 
+  async function handleSaveServiceCategory(e: React.FormEvent) {
+    e.preventDefault();
+    if (!serviceCategoryForm.name.trim()) {
+      toast.error("Please add a category name.");
+      return;
+    }
+
+    setSavingServiceCategory(true);
+    try {
+      const savedCategory = (await saveServiceCategoryFn({
+        data: {
+          name: serviceCategoryForm.name.trim(),
+        },
+      })) as ServiceCategoryItem;
+
+      setServiceCategories((current) => {
+        const existing = current.find((item) => item.id === savedCategory.id);
+        if (existing) {
+          return current.map((item) => (item.id === savedCategory.id ? savedCategory : item));
+        }
+        return [...current, savedCategory].sort((a, b) => a.name.localeCompare(b.name));
+      });
+
+      setServiceForm((prev) => ({ ...prev, service_category_id: savedCategory.id }));
+      toast.success("Service category created.");
+      resetServiceCategoryForm();
+    } catch (error) {
+      console.error("Failed to save service category", error);
+      toast.error("Unable to save service category right now.");
+    } finally {
+      setSavingServiceCategory(false);
+    }
+  }
+
   async function handleSaveService(e: React.FormEvent) {
     e.preventDefault();
     if (!serviceForm.name.trim()) {
@@ -692,6 +796,7 @@ function DashboardPage() {
           name: serviceForm.name.trim(),
           price_kes: serviceForm.price_kes,
           duration_minutes: serviceForm.duration_minutes,
+          service_category_id: serviceForm.service_category_id ?? null,
           icon_url: serviceForm.icon_url,
         },
       })) as ServiceItem;
@@ -1153,6 +1258,9 @@ function DashboardPage() {
                 <button onClick={() => setActiveView("bookings")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "bookings" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <CalendarDays className="h-4 w-4" /> Bookings
                 </button>
+                <button onClick={() => setActiveView("appointments")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "appointments" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
+                  <CalendarDays className="h-4 w-4" /> Appointments
+                </button>
                 <button onClick={() => setActiveView("prescriptions")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "prescriptions" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <FileText className="h-4 w-4" /> Prescriptions
                 </button>
@@ -1603,6 +1711,7 @@ function DashboardPage() {
                         <tr>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Icon</th>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Name</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Category</th>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Price</th>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Duration</th>
                           <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Actions</th>
@@ -1623,6 +1732,7 @@ function DashboardPage() {
                             <td className="px-4 py-3">
                               <div className="font-semibold">{service.name}</div>
                             </td>
+                            <td className="px-4 py-3">{serviceCategories.find((category) => category.id === service.service_category_id)?.name ?? "Uncategorized"}</td>
                             <td className="px-4 py-3">{formatServicePrice(service.price_kes)}</td>
                             <td className="px-4 py-3">{formatServiceTat(service.duration_minutes)}</td>
                             <td className="px-4 py-3">
@@ -1744,6 +1854,92 @@ function DashboardPage() {
               </div>
             ) : null}
 
+            {activeView === "appointments" ? (
+              <div id="appointments" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary">
+                      <CalendarDays className="h-5 w-5" />
+                      <h2 className="font-display text-2xl font-semibold">Doctor appointments</h2>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">Review doctor appointment requests and track the specialist chosen by each customer.</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 sm:grid-cols-[1fr_180px]">
+                  <label className="block text-sm font-medium">
+                    Search appointments
+                    <input
+                      value={appointmentSearch}
+                      onChange={(e) => setAppointmentSearch(e.target.value)}
+                      placeholder="Appointment number, customer, doctor, or service"
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium">
+                    Filter status
+                    <select
+                      value={appointmentStatusFilter}
+                      onChange={(e) => setAppointmentStatusFilter(e.target.value as BookingStatus | "all")}
+                      className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                    >
+                      <option value="all">All statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="rescheduled">Rescheduled</option>
+                      <option value="canceled">Canceled</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-6 overflow-x-auto">
+                  {filteredAppointments.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground">
+                      No appointments match your search.
+                    </div>
+                  ) : (
+                    <table className="min-w-full divide-y divide-border text-sm">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Appointment</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Customer</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Doctor</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Service</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Date</th>
+                          <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {filteredAppointments.map((appointment) => (
+                          <tr key={appointment.id} className="bg-background">
+                            <td className="px-4 py-3">
+                              <div className="font-semibold">{appointment.booking_number}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">Created {appointment.createdAt?.split("T")[0] ?? "-"}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div>{appointment.customer_name}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">{appointment.customer_phone} · {appointment.customer_email}</div>
+                            </td>
+                            <td className="px-4 py-3">{appointment.preferred_doctor ?? "General Doctor"}</td>
+                            <td className="px-4 py-3">{appointment.service}</td>
+                            <td className="px-4 py-3">
+                              <div>{appointment.appointment_date}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">{appointment.appointment_time}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${appointment.status === "confirmed" ? "bg-emerald-100 text-emerald-700" : appointment.status === "pending" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>
+                                {appointment.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
             {activeView === "prescriptions" ? (
               <div id="prescriptions" className="rounded-4xl border border-border bg-card p-6 shadow-soft">
                 <div className="flex items-center justify-between gap-3">
@@ -1848,6 +2044,23 @@ function DashboardPage() {
                 />
               </label>
 
+              <div className="rounded-2xl border border-border bg-background p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium">Service category</span>
+                  <button type="button" onClick={openServiceCategoryDialog} className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold">Add category</button>
+                </div>
+                <select
+                  value={serviceForm.service_category_id ?? ""}
+                  onChange={(e) => setServiceForm((prev) => ({ ...prev, service_category_id: e.target.value || null }))}
+                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                >
+                  <option value="">Select a category</option>
+                  {serviceCategories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium">
                   Price (KES)
@@ -1910,6 +2123,33 @@ function DashboardPage() {
               <button type="button" onClick={resetServiceForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
               <button type="submit" form="service-form" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold">
                 {editingServiceId ? "Save service" : "Create service"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={serviceCategoryDialogOpen} onOpenChange={(open) => (open ? setServiceCategoryDialogOpen(true) : resetServiceCategoryForm())}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add service category</DialogTitle>
+              <DialogDescription>Create a new service category for the dropdown in the service form.</DialogDescription>
+            </DialogHeader>
+            <form id="service-category-form" onSubmit={handleSaveServiceCategory} className="mt-4 space-y-4">
+              <label className="block text-sm font-medium">
+                Category name
+                <input
+                  value={serviceCategoryForm.name}
+                  onChange={(e) => setServiceCategoryForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+                  placeholder="e.g. Lab Services"
+                  required
+                />
+              </label>
+            </form>
+            <DialogFooter className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={resetServiceCategoryForm} className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold">Cancel</button>
+              <button type="submit" form="service-category-form" className="rounded-full btn-gradient px-5 py-2.5 text-sm font-semibold" disabled={savingServiceCategory}>
+                {savingServiceCategory ? "Saving…" : "Create category"}
               </button>
             </DialogFooter>
           </DialogContent>

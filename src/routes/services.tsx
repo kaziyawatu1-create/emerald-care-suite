@@ -1,7 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Clock3, Eye, Headset, Package, Phone, MessageCircle } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Eye,
+  Headset,
+  Package,
+  Phone,
+  MessageCircle,
+  Search,
+} from "lucide-react";
 import pathwayLabLogo from "../assets/pathway.png";
 import { PageHeader } from "../components/site/PageHeader";
 import { Reveal } from "../components/site/Reveal";
@@ -14,8 +25,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { formatServicePrice, formatServiceTat, readServices, type ServiceItem } from "../lib/services";
-import { listServices } from "../lib/services.functions";
+import { listServiceCategories, listServices, type ServiceCategoryItem } from "../lib/services.functions";
 import { createBooking } from "../lib/bookings.functions";
 
 type BookingForm = {
@@ -44,8 +56,14 @@ export const Route = createFileRoute("/services")({
 
 function ServicesPage() {
   const loadServicesFn = useServerFn(listServices);
+  const loadServiceCategoriesFn = useServerFn(listServiceCategories);
   const bookServiceFn = useServerFn(createBooking);
   const [services, setServices] = useState<ServiceItem[]>(() => readServices());
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategoryItem[]>([]);
+  const [serviceSearchQuery, setServiceSearchQuery] = useState("");
+  const [activeCategoryTab, setActiveCategoryTab] = useState("all");
+  const [servicesPage, setServicesPage] = useState(1);
+  const servicesPerPage = 6;
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState(1);
@@ -92,12 +110,72 @@ function ServicesPage() {
         }
       });
 
+    loadServiceCategoriesFn()
+      .then((rows) => {
+        if (!mounted) return;
+        setServiceCategories(Array.isArray(rows) ? (rows as ServiceCategoryItem[]) : []);
+      })
+      .catch(() => {
+        if (mounted) {
+          setServiceCategories([]);
+        }
+      });
+
     return () => {
       mounted = false;
     };
-  }, [loadServicesFn]);
+  }, [loadServiceCategoriesFn, loadServicesFn]);
 
-  const featuredServices = useMemo(() => services.slice(0, 6), [services]);
+  useEffect(() => {
+    setServicesPage(1);
+  }, [serviceSearchQuery, activeCategoryTab]);
+
+  const categoryTabs = useMemo(() => {
+    const tabs = [{ id: "all", name: "All services" }];
+
+    for (const category of serviceCategories) {
+      tabs.push({ id: category.id, name: category.name });
+    }
+
+    return tabs;
+  }, [serviceCategories]);
+
+  const filteredServices = useMemo(() => {
+    const query = serviceSearchQuery.trim().toLowerCase();
+
+    return services.filter((service) => {
+      const matchesSearch = !query || service.name.toLowerCase().includes(query);
+      const matchesCategory =
+        activeCategoryTab === "all"
+          ? service.service_category_id != null
+          : service.service_category_id === activeCategoryTab;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [activeCategoryTab, serviceSearchQuery, services]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / servicesPerPage));
+  const paginatedServices = useMemo(() => {
+    const startIndex = (servicesPage - 1) * servicesPerPage;
+    return filteredServices.slice(startIndex, startIndex + servicesPerPage);
+  }, [filteredServices, servicesPage]);
+
+  const groupedServices = useMemo(() => {
+    const grouped = new Map<string, ServiceItem[]>();
+
+    for (const service of paginatedServices) {
+      const categoryName =
+        serviceCategories.find((category) => category.id === service.service_category_id)?.name ??
+        "Uncategorized";
+      const nextGroup = grouped.get(categoryName) ?? [];
+      nextGroup.push(service);
+      grouped.set(categoryName, nextGroup);
+    }
+
+    return Array.from(grouped.entries()).sort(([left], [right]) => left.localeCompare(right));
+  }, [paginatedServices, serviceCategories]);
+
+  const hasMorePages = servicesPage < totalPages;
 
   const bookingSteps = [
     { label: "Contact details", description: "Tell us who the booking is for." },
@@ -295,53 +373,134 @@ function ServicesPage() {
               </article>
             </Reveal>
           </div>
-          <div className="grid gap-3 lg:grid-cols-3">
-            {featuredServices.map((service, index) => (
-              <Reveal key={service.id} delay={index * 50}>
-                <article className="rounded-2xl border border-border bg-card p-4 shadow-soft card-lift">
-                  <div className="flex items-start justify-between gap-3">
-                    <ServiceIcon iconUrl={service.icon_url} alt={service.name} />
-                    <button
-                      type="button"
-                      onClick={() => setSelectedService(service)}
-                      className="rounded-full border border-border p-2 text-muted-foreground transition hover:border-primary hover:text-primary"
-                      aria-label={`View details for ${service.name}`}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <h2 className="mt-4 font-display text-lg font-semibold">{service.name}</h2>
-                  <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                    <div>
-                      <span className="font-semibold text-foreground">Price:</span>{" "}
-                      {formatServicePrice(service.price_kes)}
-                    </div>
-                    <div>
-                      <span className="font-semibold text-foreground">TAT:</span>{" "}
-                      {formatServiceTat(service.duration_minutes)}
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openQuickBookingDialog(service, "call")}
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary"
-                    >
-                      <Phone className="h-4 w-4" />
-                      Call
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openQuickBookingDialog(service, "whatsapp")}
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/20"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      WhatsApp
-                    </button>
-                  </div>
-                </article>
-              </Reveal>
-            ))}
+        </div>
+      </section>
+
+      <section className="pb-8">
+        <div className="mx-auto max-w-6xl px-4 md:px-6">
+          <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative w-full max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={serviceSearchQuery}
+                onChange={(event) => setServiceSearchQuery(event.target.value)}
+                placeholder="Search services by name"
+                aria-label="Search services by name"
+                className="w-full rounded-full border border-border bg-background py-2.5 pl-9 pr-4 text-sm outline-none transition focus:border-primary"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredServices.length} service{filteredServices.length === 1 ? "" : "s"}
+            </p>
+          </div>
+
+          <Tabs
+            value={activeCategoryTab}
+            onValueChange={(value) => setActiveCategoryTab(value)}
+            className="mb-6"
+          >
+            <TabsList className="flex h-auto flex-wrap justify-start gap-2 rounded-[var(--radius-2xl)] bg-background p-2">
+              {categoryTabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="rounded-full px-4 py-2 text-sm font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                >
+                  {tab.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          {groupedServices.length === 0 ? (
+            <div className="rounded-[var(--radius-2xl)] border border-dashed border-border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
+              No services match your search.
+            </div>
+          ) : (
+            groupedServices.map(([categoryName, categoryServices]) => (
+              <div key={categoryName} className="mb-8">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="font-display text-xl font-semibold text-foreground">{categoryName}</h3>
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    {categoryServices.length} service{categoryServices.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <div className="grid gap-3 lg:grid-cols-3">
+                  {categoryServices.map((service, index) => (
+                    <Reveal key={service.id} delay={index * 35}>
+                      <article className="rounded-2xl border border-border bg-card p-4 shadow-soft card-lift">
+                        <div className="flex items-start justify-between gap-3">
+                          <ServiceIcon iconUrl={service.icon_url} alt={service.name} />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedService(service)}
+                            className="rounded-full border border-border p-2 text-muted-foreground transition hover:border-primary hover:text-primary"
+                            aria-label={`View details for ${service.name}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <h2 className="mt-4 font-display text-lg font-semibold">{service.name}</h2>
+                        <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                          <div>
+                            <span className="font-semibold text-foreground">Price:</span>{" "}
+                            {formatServicePrice(service.price_kes)}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-foreground">TAT:</span>{" "}
+                            {formatServiceTat(service.duration_minutes)}
+                          </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openQuickBookingDialog(service, "call")}
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary"
+                          >
+                            <Phone className="h-4 w-4" />
+                            Call
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openQuickBookingDialog(service, "whatsapp")}
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/20"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            WhatsApp
+                          </button>
+                        </div>
+                      </article>
+                    </Reveal>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+
+          <div className="mt-6 flex flex-col gap-3 rounded-[var(--radius-2xl)] border border-border bg-card px-4 py-4 md:flex-row md:items-center md:justify-between">
+            <div className="text-sm text-muted-foreground">
+              Page {servicesPage} of {totalPages}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setServicesPage((current) => Math.max(current - 1, 1))}
+                disabled={servicesPage === 1}
+                className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-2 text-sm font-semibold text-foreground transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setServicesPage((current) => Math.min(current + 1, totalPages))}
+                disabled={!hasMorePages}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Load more
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </section>

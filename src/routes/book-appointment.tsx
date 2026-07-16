@@ -37,6 +37,13 @@ const DOCTOR_PHONE_DISPLAY = "0111121500";
 const DOCTOR_PHONE_TEL = "0111121500";
 const DOCTOR_WHATSAPP = "254111121500";
 const DOCTOR_SERVICE_NAME = "Doctor Appointment";
+const DOCTOR_OPTIONS = [
+  "General Doctor",
+  "Orthopedic",
+  "Neurosurgeon",
+  "Cardiothoracic Surgeon",
+  "Pediatrician",
+] as const;
 
 function BookAppointmentPage() {
   const bookAppointmentFn = useServerFn(createBooking);
@@ -46,6 +53,7 @@ function BookAppointmentPage() {
     customer_name: "",
     customer_phone: "",
     customer_email: "",
+    preferred_doctor: "General Doctor",
   });
   const [status, setStatus] = useState<{
     type: "idle" | "success" | "error";
@@ -55,14 +63,14 @@ function BookAppointmentPage() {
 
   const openBookingDialog = (mode: "call" | "whatsapp") => {
     setBookingMode(mode);
-    setForm({ customer_name: "", customer_phone: "", customer_email: "" });
+    setForm({ customer_name: "", customer_phone: "", customer_email: "", preferred_doctor: "General Doctor" });
     setStatus({ type: "idle", message: "" });
     setBookingOpen(true);
   };
 
   const resetBookingDialog = () => {
     setBookingOpen(false);
-    setForm({ customer_name: "", customer_phone: "", customer_email: "" });
+    setForm({ customer_name: "", customer_phone: "", customer_email: "", preferred_doctor: "General Doctor" });
     setStatus({ type: "idle", message: "" });
     setIsSubmitting(false);
   };
@@ -79,12 +87,13 @@ function BookAppointmentPage() {
           customer_name: form.customer_name.trim(),
           customer_phone: form.customer_phone.trim(),
           customer_email: form.customer_email.trim(),
+          preferred_doctor: form.preferred_doctor,
           date_of_birth: new Date().toISOString().slice(0, 10),
           gender: "other",
           booking_type: "office",
           appointment_date: new Date().toISOString().slice(0, 10),
           appointment_time: "09:00",
-          notes: `Doctor appointment request via ${bookingMode === "call" ? "phone call" : "WhatsApp"}.`,
+          notes: `Doctor appointment request via ${bookingMode === "call" ? "phone call" : "WhatsApp"}. Preferred doctor: ${form.preferred_doctor}.`,
         },
       });
 
@@ -206,6 +215,22 @@ function BookAppointmentPage() {
                 className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
                 required
               />
+            </label>
+            <label className="block text-sm font-medium">
+              Preferred doctor
+              <select
+                value={form.preferred_doctor}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, preferred_doctor: event.target.value }))
+                }
+                className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3"
+              >
+                {DOCTOR_OPTIONS.map((doctor) => (
+                  <option key={doctor} value={doctor}>
+                    {doctor}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="block text-sm font-medium">
               Email (optional)

@@ -16,9 +16,9 @@ export const Route = createFileRoute("/shop")({
   head: () => ({
     meta: [
       { title: "Shop Medicine | Nuno Pharmacy" },
-      { name: "description", content: "Browse our catalogue of genuine medicines by category and add to cart. Pay with M-Pesa or on delivery." },
+      { name: "description", content: "Browse our catalogue of genuine medicines by category and add to cart. Order via WhatsApp or on delivery." },
       { property: "og:title", content: "Shop Medicine — Nuno Pharmacy" },
-      { property: "og:description", content: "Genuine medicines delivered. Pay with M-Pesa or cash on delivery." },
+      { property: "og:description", content: "Genuine medicines delivered. Order via WhatsApp or pay on delivery." },
     ],
   }),
   component: ShopPage,

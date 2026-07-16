@@ -14,6 +14,7 @@ export interface BookingItem {
   gender: BookingGender;
   appointment_date: string;
   appointment_time: string;
+  preferred_doctor?: string;
   notes: string;
   status: BookingStatus;
   createdAt: string;

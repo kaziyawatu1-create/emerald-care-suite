@@ -101,7 +101,7 @@ export async function buildOrderReceiptPdf(order: OrderReceiptData, items: Order
     doc.text(`Customer: ${order.customer_name}`);
     doc.text(`Phone: ${order.customer_phone}`);
     doc.text(`Delivery: ${order.delivery_address}`);
-    doc.text(`Payment: ${order.payment_method === "mpesa" ? "M-Pesa STK Push" : "Pay on Delivery"}`);
+    doc.text(`Payment: ${order.payment_method === "whatsapp" ? "Order via WhatsApp" : order.payment_method === "cod" ? "Pay on Delivery" : "Order via WhatsApp"}`);
     doc.text(`Status: ${order.order_status}`);
     doc.moveDown(0.6);
 
