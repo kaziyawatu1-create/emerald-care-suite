@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          appointment_date: string
+          appointment_time: string
+          booking_number: string
+          booking_type: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          date_of_birth: string
+          gender: string
+          id: string
+          notes: string | null
+          preferred_doctor: string | null
+          service: string
+          status: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_time: string
+          booking_number: string
+          booking_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          date_of_birth: string
+          gender: string
+          id?: string
+          notes?: string | null
+          preferred_doctor?: string | null
+          service: string
+          status?: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_time?: string
+          booking_number?: string
+          booking_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          date_of_birth?: string
+          gender?: string
+          id?: string
+          notes?: string | null
+          preferred_doctor?: string | null
+          service?: string
+          status?: string
+        }
+        Relationships: []
+      }
       brands: {
         Row: {
           created_at: string
@@ -41,6 +95,60 @@ export type Database = {
           logo_url?: string | null
           name?: string
           slug?: string | null
+        }
+        Relationships: []
+      }
+      doctor_appointments: {
+        Row: {
+          appointment_date: string
+          appointment_number: string
+          appointment_time: string
+          booking_type: string
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          date_of_birth: string | null
+          gender: string
+          id: string
+          notes: string | null
+          preferred_doctor: string | null
+          service: string
+          status: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_number: string
+          appointment_time: string
+          booking_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          date_of_birth?: string | null
+          gender?: string
+          id?: string
+          notes?: string | null
+          preferred_doctor?: string | null
+          service: string
+          status?: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_number?: string
+          appointment_time?: string
+          booking_type?: string
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          date_of_birth?: string | null
+          gender?: string
+          id?: string
+          notes?: string | null
+          preferred_doctor?: string | null
+          service?: string
+          status?: string
         }
         Relationships: []
       }
@@ -106,7 +214,6 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
-          discount: string | null
           discount_percent: number | null
           expires_at: string | null
           id: string
@@ -121,7 +228,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
-          discount?: string | null
           discount_percent?: number | null
           expires_at?: string | null
           id?: string
@@ -136,7 +242,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
-          discount?: string | null
           discount_percent?: number | null
           expires_at?: string | null
           id?: string
@@ -155,192 +260,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      service_categories: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
-      services: {
-        Row: {
-          created_at: string
-          id: string
-          icon_url: string | null
-          name: string
-          price_kes: number
-          duration_minutes: number
-          service_category_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          icon_url?: string | null
-          name: string
-          price_kes: number
-          duration_minutes: number
-          service_category_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          icon_url?: string | null
-          name?: string
-          price_kes?: number
-          duration_minutes?: number
-          service_category_id?: string | null
-        }
-        Relationships: []
-      }
-      bookings: {
-        Row: {
-          appointment_date: string
-          appointment_time: string
-          booking_number: string
-          booking_type: string
-          created_at: string
-          customer_email: string | null
-          customer_name: string
-          customer_phone: string
-          date_of_birth: string
-          gender: string
-          id: string
-          notes: string | null
-          preferred_doctor: string | null
-          service: string
-          status: string
-        }
-        Insert: {
-          appointment_date: string
-          appointment_time: string
-          booking_number: string
-          booking_type?: string
-          created_at?: string
-          customer_email?: string | null
-          customer_name: string
-          customer_phone: string
-          date_of_birth: string
-          gender?: string
-          id?: string
-          notes?: string | null
-          preferred_doctor?: string | null
-          service: string
-          status?: string
-        }
-        Update: {
-          appointment_date?: string
-          appointment_time?: string
-          booking_number?: string
-          booking_type?: string
-          created_at?: string
-          customer_email?: string | null
-          customer_name?: string
-          customer_phone?: string
-          date_of_birth?: string
-          gender?: string
-          id?: string
-          notes?: string | null
-          preferred_doctor?: string | null
-          service?: string
-          status?: string
-        }
-        Relationships: []
-      }
-      doctor_appointments: {
-        Row: {
-          appointment_date: string
-          appointment_number: string
-          appointment_time: string
-          booking_type: string
-          created_at: string
-          customer_email: string | null
-          customer_name: string
-          customer_phone: string
-          date_of_birth: string | null
-          gender: string
-          id: string
-          notes: string | null
-          preferred_doctor: string | null
-          service: string
-          status: string
-        }
-        Insert: {
-          appointment_date: string
-          appointment_number: string
-          appointment_time: string
-          booking_type?: string
-          created_at?: string
-          customer_email?: string | null
-          customer_name: string
-          customer_phone: string
-          date_of_birth?: string | null
-          gender?: string
-          id?: string
-          notes?: string | null
-          preferred_doctor?: string | null
-          service: string
-          status?: string
-        }
-        Update: {
-          appointment_date?: string
-          appointment_number?: string
-          appointment_time?: string
-          booking_type?: string
-          created_at?: string
-          customer_email?: string | null
-          customer_name?: string
-          customer_phone?: string
-          date_of_birth?: string | null
-          gender?: string
-          id?: string
-          notes?: string | null
-          preferred_doctor?: string | null
-          service?: string
-          status?: string
-        }
-        Relationships: []
-      }
-      prescriptions: {
-        Row: {
-          created_at: string
-          customer_name: string
-          customer_phone: string
-          id: string
-          prescription_path: string
-          prescription_url: string
-          uploaded_at: string
-        }
-        Insert: {
-          created_at?: string
-          customer_name: string
-          customer_phone: string
-          id?: string
-          prescription_path: string
-          prescription_url: string
-          uploaded_at?: string
-        }
-        Update: {
-          created_at?: string
-          customer_name?: string
-          customer_phone?: string
-          id?: string
-          prescription_path?: string
-          prescription_url?: string
-          uploaded_at?: string
-        }
-        Relationships: []
       }
       order_items: {
         Row: {
@@ -438,6 +357,36 @@ export type Database = {
         }
         Relationships: []
       }
+      prescriptions: {
+        Row: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          prescription_path: string
+          prescription_url: string
+          uploaded_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          id?: string
+          prescription_path: string
+          prescription_url: string
+          uploaded_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          prescription_path?: string
+          prescription_url?: string
+          uploaded_at?: string
+        }
+        Relationships: []
+      }
       product_categories: {
         Row: {
           created_at: string
@@ -512,6 +461,62 @@ export type Database = {
           },
         ]
       }
+      service_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          icon_url: string | null
+          id: string
+          name: string
+          price_kes: number
+          service_category_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes: number
+          icon_url?: string | null
+          id?: string
+          name: string
+          price_kes: number
+          service_category_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          icon_url?: string | null
+          id?: string
+          name?: string
+          price_kes?: number
+          service_category_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_service_category_id_fkey"
+            columns: ["service_category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -536,12 +541,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -565,11 +570,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -590,11 +595,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -615,11 +620,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -632,11 +637,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
