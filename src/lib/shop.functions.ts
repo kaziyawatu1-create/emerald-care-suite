@@ -26,6 +26,17 @@ export const listProducts = createServerFn({ method: "GET" }).handler(async () =
   return data ?? [];
 });
 
+export const listAllProductsForReport = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("id,name,category,price_kes,unit,requires_prescription,in_stock,brand_id,created_at")
+    .order("category")
+    .order("name");
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
 export const listBrands = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = publicClient();
   const { data, error } = await supabase

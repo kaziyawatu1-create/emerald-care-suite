@@ -1263,6 +1263,9 @@ function DashboardPage() {
                 <button onClick={() => setActiveView("orders")} className={`inline-flex items-center justify-start gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${activeView === "orders" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary"}`}>
                   <ShoppingCart className="h-4 w-4" /> Orders
                 </button>
+                <Link to="/reports" className="inline-flex items-center justify-start gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold hover:border-primary">
+                  <FileText className="h-4 w-4" /> Reports
+                </Link>
               </div>
             </div>
           </aside>
