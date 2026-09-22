@@ -672,7 +672,6 @@ function DashboardPage() {
       setProductForm({ name: "", category: "", description: "", price_kes: 0, unit: "pack", requires_prescription: false, in_stock: true, image_urls: [], brand_id: null });
     }
     setProductDialogOpen(true);
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function resetCategoryForm() {
@@ -690,7 +689,6 @@ function DashboardPage() {
       setCategoryForm({ name: "", description: "" });
     }
     setCategoryDialogOpen(true);
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function resetServiceForm() {
@@ -729,7 +727,6 @@ function DashboardPage() {
       resetServiceForm();
     }
     setServiceDialogOpen(true);
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleEditService(service: ServiceItem) {
@@ -1006,7 +1003,6 @@ function DashboardPage() {
       setBrandForm({ name: "", description: "", logo_url: "", slug: "", is_active: true });
     }
     setBrandDialogOpen(true);
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleSaveBrand(e: React.FormEvent) {
