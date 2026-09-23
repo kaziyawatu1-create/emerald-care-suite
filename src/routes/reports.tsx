@@ -85,7 +85,7 @@ function ReportsPage() {
         `Category: ${category === "all" ? "All" : category}`,
         `Brand: ${brandId === "all" ? "All" : brandId === "none" ? "No brand" : brandName(brandId)}`,
         `Stock: ${stock === "all" ? "All" : stock === "in" ? "In stock" : "Out of stock"}`,
-        `Price: ${minPrice || 0} – ${maxPrice || "∞"} KES`,
+        `Price: ${minPrice || 0} - ${maxPrice || "Any"} KES`,
       ].join("   |   ");
       doc.text(filterLine, 40, 64);
       doc.text(`Generated: ${generated}`, 40, 79);
@@ -98,7 +98,7 @@ function ReportsPage() {
           String(i + 1),
           p.name,
           p.category,
-          brandName(p.brand_id),
+          brandName(p.brand_id) === "—" ? "-" : brandName(p.brand_id),
           Number(p.price_kes).toLocaleString("en-KE"),
           p.unit ?? "-",
           p.requires_prescription ? "Required" : "No",
