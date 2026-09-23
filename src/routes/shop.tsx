@@ -58,29 +58,19 @@ function ShopPage() {
   const { add, count } = useCart();
   const [justAdded, setJustAdded] = useState<string | null>(null);
 
+  // Live database data always wins. The locally cached catalogue is only a
+  // placeholder shown until the fresh list arrives.
   useEffect(() => {
-    const storedProducts = readCatalogProducts();
-    const storedCategories = readCatalogCategories();
-
-    if (storedProducts.length > 0) {
-      setCatalogProducts(storedProducts);
-    } else if (data && data.length > 0) {
+    if (data && data.length > 0) {
       setCatalogProducts(data as Product[]);
-    }
-
-    if (storedCategories.length > 0) {
-      setCatalogCategories(storedCategories);
-    } else if (data && data.length > 0) {
-      const derivedCategories = Array.from(new Set((data as Product[]).map((p) => p.category))).map((name) => ({ id: name, name, description: "" }));
-      setCatalogCategories(derivedCategories);
+      setCatalogCategories(
+        Array.from(new Set((data as Product[]).map((p) => p.category))).map((name) => ({ id: name, name, description: "" })),
+      );
     }
   }, [data]);
 
-  const products = catalogProducts.length > 0 ? catalogProducts : ((data ?? []) as Product[]);
-  const categories = useMemo(() => {
-    if (catalogCategories.length > 0) return catalogCategories.map((category) => category.name);
-    return Array.from(new Set(products.map((p) => p.category)));
-  }, [catalogCategories, products]);
+  const products = data && data.length > 0 ? (data as Product[]) : catalogProducts;
+  const categories = useMemo(() => Array.from(new Set(products.map((p) => p.category))), [products]);
 
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
   const [activeProductImageIndex, setActiveProductImageIndex] = useState(0);
