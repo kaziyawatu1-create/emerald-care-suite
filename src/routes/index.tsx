@@ -781,7 +781,7 @@ function Index() {
               </p>
               <div className="mt-8 grid gap-4">
                 {[
-                  [Phone, "Phone", "0703244711"],
+                  [Phone, "Phone", "0768779649"],
                   [Mail, "Email", "nunopharmaceutical@gmail.com"],
                   [MapPin, "Location", "Nairobi, South C, off Popo Road, opposite Midad Academy"],
                   [Clock3, "Business Hours(Monday-Saturday)", "Mon–Sun · 08:00 — 22:00"],

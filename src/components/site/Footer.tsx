@@ -40,7 +40,7 @@ export function Footer() {
         <div>
           <h4 className="font-display font-semibold mb-4">Contact</h4>
           <ul className="space-y-3 text-sm text-muted-foreground">
-            <li className="flex gap-2.5"><Phone className="h-4 w-4 text-primary mt-0.5" /> 0703244711</li>
+            <li className="flex gap-2.5"><Phone className="h-4 w-4 text-primary mt-0.5" /> 0768779649</li>
             <li className="flex gap-2.5"><Mail className="h-4 w-4 text-primary mt-0.5" /> nunopharmaceutical@gmail.com</li>
             <li className="flex gap-2.5"><MessageCircle className="h-4 w-4 text-primary mt-0.5" /> <a href="https://www.tiktok.com/@nunopharma" target="_blank" rel="noreferrer" className="hover:text-primary">@nunopharma</a></li>
             <li className="flex gap-2.5"><MapPin className="h-4 w-4 text-primary mt-0.5" /> Kenya, Nairobi, South C, opposite Midad Academy, off Popo Road</li>

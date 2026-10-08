@@ -200,7 +200,7 @@ export function Navbar() {
             <a href="tel:+254768779649" className="inline-flex items-center gap-1.5 hover:opacity-90">
               <Phone className="h-3.5 w-3.5" /> +254 768 779 649
             </a>|
-             <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
+             <a href="tel:+254768779649" className="inline-flex items-center gap-1.5 hover:opacity-90">
               <MessageCircle className="h-3.5 w-3.5 text-green-500" /> +254 703 244 711
             </a>|
             <a href="mailto:nunopharmaceutical@gmail.com" className="inline-flex items-center gap-1.5 hover:opacity-90">

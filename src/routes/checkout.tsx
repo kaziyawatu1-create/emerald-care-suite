@@ -34,7 +34,7 @@ function CheckoutPage() {
 
   const whatsappUrl = buildWhatsAppOrderUrl({
     customerName: "Customer",
-    customerPhone: "0703244711",
+    customerPhone: "0768779649",
     deliveryAddress: "To be confirmed on WhatsApp",
     items: items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price })),
     subtotal,
