@@ -1,4 +1,4 @@
-export const WHATSAPP_ORDER_NUMBER = "254703244711";
+export const WHATSAPP_ORDER_NUMBER = "254768779649";
 export const WHATSAPP_ORDER_URL = `https://wa.me/${WHATSAPP_ORDER_NUMBER}`;
 
 export type WhatsAppOrderItem = {
