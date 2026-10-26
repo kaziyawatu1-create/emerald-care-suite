@@ -39,7 +39,7 @@ function WellnessPackagePage() {
     const message = encodeURIComponent(
       "Hello Nuno Pharmacy, I would like to book the Full Body Wellness Package. Please share the available dates and next steps.",
     );
-    window.open(`https://wa.me/254703244711?text=${message}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/254768779649?text=${message}`, "_blank", "noopener,noreferrer");
   };
 
   return (

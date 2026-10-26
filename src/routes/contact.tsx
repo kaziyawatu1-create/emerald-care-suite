@@ -64,7 +64,7 @@ function ContactPage() {
           <div className="grid gap-4">
             {[
               { icon: Phone, label: "Phone", value: "0703244711", href: "tel:+254703244711" },
-              { icon: MessageCircle, label: "WhatsApp", value: "0703244711", href: "https://wa.me/254703244711" },
+              { icon: MessageCircle, label: "WhatsApp", value: "0768779649", href: "https://wa.me/254768779649" },
               { icon: Mail, label: "Email", value: "nunopharmaceutical@gmail.com", href: "mailto:nunopharmaceutical@gmail.com" },
               { icon: MessageCircle, label: "TikTok", value: "@nunopharma", href: "https://www.tiktok.com/@nunopharma" },
               { icon: MapPin, label: "Location", value: "Kenya, Nairobi, South C, opposite Midad Academy, off Popo Road" },

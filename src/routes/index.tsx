@@ -151,7 +151,7 @@ function Index() {
     const message = encodeURIComponent(
       "Hello Nuno Pharmacy, I would like to learn more about the wellness promotion and book a consultation.",
     );
-    window.open(`https://wa.me/254703244711?text=${message}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/254768779649?text=${message}`, "_blank", "noopener,noreferrer");
   };
 
   const handlePromoVideoMetadata = (
