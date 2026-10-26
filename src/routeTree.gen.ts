@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WellnessPackageRouteImport } from './routes/wellness-package'
 import { Route as SkincareRouteImport } from './routes/skincare'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
@@ -31,6 +32,11 @@ import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
 import { Route as ApiPublicContactRouteImport } from './routes/api/public/contact'
 import { Route as ApiPublicMpesaCallbackRouteImport } from './routes/api/public/mpesa/callback'
 
+const WellnessPackageRoute = WellnessPackageRouteImport.update({
+  id: '/wellness-package',
+  path: '/wellness-package',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SkincareRoute = SkincareRouteImport.update({
   id: '/skincare',
   path: '/skincare',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
+  '/wellness-package': typeof WellnessPackageRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
+  '/wellness-package': typeof WellnessPackageRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/skincare': typeof SkincareRoute
+  '/wellness-package': typeof WellnessPackageRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/mpesa/callback': typeof ApiPublicMpesaCallbackRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/skincare'
+    | '/wellness-package'
     | '/order/$orderId'
     | '/api/public/contact'
     | '/api/public/mpesa/callback'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/skincare'
+    | '/wellness-package'
     | '/order/$orderId'
     | '/api/public/contact'
     | '/api/public/mpesa/callback'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/skincare'
+    | '/wellness-package'
     | '/order/$orderId'
     | '/api/public/contact'
     | '/api/public/mpesa/callback'
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SkincareRoute: typeof SkincareRoute
+  WellnessPackageRoute: typeof WellnessPackageRoute
   OrderOrderIdRoute: typeof OrderOrderIdRoute
   ApiPublicContactRoute: typeof ApiPublicContactRoute
   ApiPublicMpesaCallbackRoute: typeof ApiPublicMpesaCallbackRoute
@@ -305,6 +318,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wellness-package': {
+      id: '/wellness-package'
+      path: '/wellness-package'
+      fullPath: '/wellness-package'
+      preLoaderRoute: typeof WellnessPackageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/skincare': {
       id: '/skincare'
       path: '/skincare'
@@ -474,6 +494,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SkincareRoute: SkincareRoute,
+  WellnessPackageRoute: WellnessPackageRoute,
   OrderOrderIdRoute: OrderOrderIdRoute,
   ApiPublicContactRoute: ApiPublicContactRoute,
   ApiPublicMpesaCallbackRoute: ApiPublicMpesaCallbackRoute,

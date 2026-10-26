@@ -2,7 +2,29 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, Gift, Headset, Info, LayoutGrid, Mail, Menu, Phone, ShoppingBag, Sparkles, Stethoscope, Tag, UserRound, Upload, X ,MessageCircle} from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  Gift,
+  HeartPulse,
+  Home,
+  Info,
+  LayoutGrid,
+  Mail,
+  Menu,
+  MessageCircle,
+  Phone,
+  Search,
+  ShoppingBag,
+  Sparkles,
+  Stethoscope,
+  Tag,
+  Truck,
+  UserRound,
+  Upload,
+  X,
+  Zap,
+} from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { listBrands } from "@/lib/shop.functions";
 import { createPrescription, getPrescription } from "@/lib/prescriptions.functions";
@@ -12,7 +34,9 @@ import logoImage from "@/assets/LOGO.jpg";
 const links = [
   { to: "/", label: "Home" },
   { to: "/shop", label: "Shop by category" },
-  { to: "/categories", label: "services" },
+  { to: "/categories", label: "Services" },
+  { to: "/services", label: "Wellness Package" },
+  { to: "/prescription", label: "Prescription" },
 ] as const;
 
 type NavbarBrand = {
@@ -187,113 +211,179 @@ export function Navbar() {
   };
 
   return (
-    <header className={`sticky top-0 z-50 glass-nav transition-all ${scrolled ? "shadow-soft" : ""}`}>
-      <div className="border-b border-white/20 bg-linear-to-r from-primary via-primary/90 to-gold/90 text-primary-foreground">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm font-medium md:px-8">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-2.5 py-1">
-              <Sparkles className="h-3.5 w-3.5" />
-              Free delivery within Nairobi for orders above KES 3,000
+    <header className={`sticky top-0 z-50 transition-all ${scrolled ? "shadow-soft" : ""}`}>
+      <div className="relative overflow-hidden border-b border-emerald-700/70 bg-[linear-gradient(90deg,#0f9d5b_0%,#0d8d56_28%,#0d8d56_72%,#0f9d5b_100%)] text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.12),transparent_24%)]" />
+        <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(to_right,rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.18)_1px,transparent_1px)] [background-size:22px_22px]" />
+
+        <div className="relative mx-auto max-w-[1600px] px-4 py-3 md:px-8">
+          <div className="flex flex-wrap items-center gap-3 text-sm font-semibold">
+            <span className="inline-flex items-center gap-2 rounded-md bg-red-500 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] shadow-lg shadow-red-950/20 animate-[pulse_1.6s_ease-in-out_infinite] ring-2 ring-red-300/80">
+              <Zap className="h-3.5 w-3.5 animate-pulse" />
+              Special Offer
             </span>
+            <span className="text-base font-bold tracking-tight text-white md:text-[1.5rem]">
+              PathCare Laboratory Full Body Wellness Package
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-100 md:text-sm">
+                Save up to 60%
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-sm font-extrabold text-yellow-300">
+                KES 13,999/= <span className="text-white/70 line-through">35,299/=</span>
+              </span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <a href="tel:+254768779649" className="inline-flex items-center gap-1.5 hover:opacity-90">
-              <Phone className="h-3.5 w-3.5" /> +254 768 779 649
-            </a>|
-             <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
-              <MessageCircle className="h-3.5 w-3.5 text-green-500" /> +254 703 244 711
-            </a>|
-            <a href="mailto:nunopharmaceutical@gmail.com" className="inline-flex items-center gap-1.5 hover:opacity-90">
-              <Mail className="h-3.5 w-3.5" /> nunopharmaceutical@gmail.com
-            </a>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-sm backdrop-blur-sm transition hover:bg-white/15"
+              >
+                <Truck className="h-4 w-4" />
+                Free Home/Office Collection
+              </button>
+              <Link
+                to="/wellness-package"
+                className="inline-flex items-center gap-2 rounded-full bg-yellow-300 px-4 py-2 text-sm font-bold text-emerald-900 shadow-lg shadow-yellow-900/20 transition hover:bg-yellow-200"
+              >
+                <ArrowRight className="h-4 w-4" />
+                View Packages
+              </Link>
+              <button type="button" aria-label="Chat support" className="grid h-10 w-10 place-items-center rounded-full border border-white/30 bg-white/10 transition hover:bg-white/15">
+                <MessageCircle className="h-4 w-4 text-white" />
+              </button>
+              <button type="button" aria-label="Close promo" className="grid h-10 w-10 place-items-center rounded-full border border-white/30 bg-white/10 transition hover:bg-white/15">
+                <X className="h-4 w-4 text-white" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/20 pt-2 text-xs font-medium text-white/90 md:text-sm">
+            <div className="inline-flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              Free delivery within Nairobi for orders above KES 3,000
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <a href="tel:+254768779649" className="inline-flex items-center gap-1.5 hover:opacity-90">
+                <Phone className="h-3.5 w-3.5" />
+                +254 768 779 649
+              </a>
+              <a href="tel:+254703244711" className="inline-flex items-center gap-1.5 hover:opacity-90">
+                <MessageCircle className="h-3.5 w-3.5 text-emerald-100" />
+                +254 703 244 711
+              </a>
+              <a href="mailto:nunopharmaceutical@gmail.com" className="inline-flex items-center gap-1.5 hover:opacity-90">
+                <Mail className="h-3.5 w-3.5" />
+                nunopharmaceutical@gmail.com
+              </a>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="w-full bg-background/75 backdrop-blur-md transition-colors">
-        <div className="mx-auto max-w-7xl px-4 py-3 md:px-8">
-          <div className="grid gap-3 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center rounded-2xl p-2">
-            <Link to="/" className="flex items-center gap-2.5 group lg:min-w-60">
-              <img src={logoImage} alt="Nuno Pharmacy logo" className="h-30 w-30 object-cover transition group-hover:scale-105" />
-              <span className="font-display text-lg font-bold tracking-tight"><span className="text-primary">Pharmacy</span></span>
+      <div className="w-full border-b border-emerald-100 bg-white/95 backdrop-blur-md transition-colors">
+        <div className="mx-auto max-w-[1600px] px-4 md:px-8">
+          <div className="flex items-center gap-3 py-3">
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+              <img src={logoImage} alt="Nuno Pharmacy logo" className="h-14 w-14 rounded-full object-cover shadow-sm ring-2 ring-emerald-100 transition group-hover:scale-105 md:h-16 md:w-16" />
+              <div className="flex flex-col leading-none">
+                <span className="font-black uppercase tracking-[0.18em] text-emerald-700 text-xl">Nuno</span>
+                <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-900/80">Pharmacy</span>
+              </div>
             </Link>
 
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-end gap-2">
-                <Link to="/offers" aria-label="Offers" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"><Gift className="h-4.5 w-4.5" /></Link>
-                <Link to="/about" aria-label="About" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"><Info className="h-4.5 w-4.5" /></Link>
-                <Link to="/contact" aria-label="Contact" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"><Mail className="h-4.5 w-4.5" /></Link>
-                <Link to="/dashboard" aria-label="Sign in" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition"><UserRound className="h-4.5 w-4.5" /></Link>
-                <Link to="/cart" aria-label="Cart" className="relative grid h-10 w-10 place-items-center rounded-full border border-border bg-background hover:border-primary hover:text-primary transition">
-                  <ShoppingBag className="h-4.5 w-4.5" />
-                  {count > 0 && <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">{count}</span>}
-                </Link>
-                <button aria-label="Toggle menu" onClick={() => setOpen((v) => !v)} className="lg:hidden grid h-10 w-10 place-items-center rounded-full border border-border bg-background">{open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
-              </div>
+            <nav className="hidden flex-1 items-center justify-center gap-1 rounded-full bg-[#dff1d3] p-1 lg:flex">
+              {links.map((l) => {
+                const iconMap: Record<string, React.ReactElement> = {
+                  "/": <Home className="h-4 w-4" />,
+                  "/shop": <ShoppingBag className="h-4 w-4" />,
+                  "/categories": <LayoutGrid className="h-4 w-4" />,
+                  "/services": <HeartPulse className="h-4 w-4" />,
+                  "/prescription": <Stethoscope className="h-4 w-4" />,
+                };
 
-              <nav className="hidden lg:flex items-center justify-end gap-1 flex-wrap rounded-full bg-primary/95 backdrop-blur px-2 py-1 border border-primary/40 text-white">
-                {links.map((l) => {
-                  const iconMap: Record<string, React.ReactElement> = {
-                    "/": <Sparkles className="h-4 w-4" />,
-                    "/shop": <ShoppingBag className="h-4 w-4" />,
-                    "/services": <Gift className="h-4 w-4" />,
-                    "/categories": <LayoutGrid className="h-4 w-4" />,
-                  };
-
+                if (l.to === "/prescription") {
                   return (
-                    <Link
+                    <button
                       key={l.to}
-                      to={l.to}
-                      activeOptions={{ exact: l.to === "/" }}
-                      activeProps={{ className: "text-white bg-white/10 shadow-soft" }}
-                      inactiveProps={{ className: "text-white/80 hover:text-white hover:bg-white/10" }}
-                      className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors"
+                      type="button"
+                      onClick={() => setDialogOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-emerald-900 transition hover:bg-white/80"
                     >
                       {iconMap[l.to]}
                       {l.label}
-                    </Link>
+                    </button>
                   );
-                })}
-                <div className="group relative">
-                  <button type="button" className="inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-white">
-                    <Tag className="h-4 w-4 text-white/70" />
-                    Shop by brands
-                    <ChevronDown className="h-4 w-4 text-white/70 transition group-hover:text-white" />
-                  </button>
-                  <div className="pointer-events-none absolute left-0 top-full z-50 mt-1 min-w-[34rem] max-w-[min(90vw,42rem)] rounded-2xl border border-border bg-background/95 p-3 opacity-0 shadow-xl transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
-                    <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">Popular brands</div>
-                    {brands.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {brands.map((brand) => (
-                          <Link key={brand.id} to="/shop" search={{ brand: brand.slug || brand.id }} className="flex items-center gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 transition hover:border-primary hover:bg-primary/5">
-                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-white">
-                              {brand.logo_url ? (
-                                <img src={brand.logo_url} alt={brand.name} className="h-full w-full object-contain" />
-                              ) : (
-                                <Tag className="h-5 w-5 text-muted-foreground" />
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-foreground">{brand.name}</p>
-                              {brand.description ? <p className="truncate text-xs text-muted-foreground">{brand.description}</p> : null}
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="rounded-xl border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">New brand logos will appear here soon.</p>
-                    )}
-                  </div>
-                </div>
-                <Link to="/services" className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-white/15 transition hover:bg-white/20 font-display">
-                  <Stethoscope className="h-4 w-4" />
-                  Book Appointment
-                </Link>
-                <button type="button" onClick={() => setDialogOpen(true)} className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 hover:border-white/25">
-                  <Upload className="h-4 w-4" />
-                  Prescription
+                }
+
+                return (
+                  <Link
+                    key={l.to}
+                    to={l.to}
+                    activeOptions={{ exact: l.to === "/" }}
+                    activeProps={{ className: "text-emerald-900 bg-white shadow-sm" }}
+                    inactiveProps={{ className: "text-emerald-900/80 hover:text-emerald-900 hover:bg-white/50" }}
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition"
+                  >
+                    {iconMap[l.to]}
+                    {l.label}
+                  </Link>
+                );
+              })}
+
+              <div className="group relative">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-emerald-900 transition hover:bg-white/70"
+                >
+                  <Tag className="h-4 w-4" />
+                  Shop by brands
+                  <ChevronDown className="h-4 w-4 text-emerald-900/70 transition group-hover:text-emerald-900" />
                 </button>
-              </nav>
+                <div className="pointer-events-none absolute left-0 top-full z-50 mt-2 min-w-[34rem] max-w-[min(90vw,42rem)] rounded-2xl border border-emerald-100 bg-white/95 p-3 opacity-0 shadow-xl transition duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
+                  <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">Popular brands</div>
+                  {brands.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {brands.map((brand) => (
+                        <Link key={brand.id} to="/shop" search={{ brand: brand.slug || brand.id }} className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white px-3 py-2 transition hover:border-emerald-300 hover:bg-emerald-50">
+                          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-emerald-100 bg-white">
+                            {brand.logo_url ? (
+                              <img src={brand.logo_url} alt={brand.name} className="h-full w-full object-contain" />
+                            ) : (
+                              <Tag className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-foreground">{brand.name}</p>
+                            {brand.description ? <p className="truncate text-xs text-muted-foreground">{brand.description}</p> : null}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-emerald-100 px-3 py-3 text-sm text-muted-foreground">New brand logos will appear here soon.</p>
+                  )}
+                </div>
+              </div>
+            </nav>
+
+            <div className="ml-auto flex items-center gap-2">
+              <Link to="/cart" aria-label="Cart" className="relative grid h-11 w-11 place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100">
+                <ShoppingBag className="h-5 w-5" />
+                {count > 0 && (
+                  <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">
+                    {count}
+                  </span>
+                )}
+              </Link>
+              <button aria-label="Search" className="grid h-11 w-11 place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100">
+                <Search className="h-5 w-5" />
+              </button>
+              <button aria-label="Toggle menu" onClick={() => setOpen((v) => !v)} className="grid h-11 w-11 place-items-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 lg:hidden">
+                {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
             </div>
           </div>
         </div>

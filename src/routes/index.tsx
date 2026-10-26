@@ -16,6 +16,7 @@ import {
   Pill,
   Sparkles,
   MessageCircle,
+  X,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { Counter } from "../components/site/Counter";
@@ -74,6 +75,7 @@ const whyIcons = [ShieldCheck, FlaskConical, Stethoscope, Wallet];
 const featureIcons = [Microscope, Pill, HeartPulse, Sparkles];
 
 function Index() {
+  const promoCardSlide = "promo-wellness-card";
   const heroSlides = [
     perfumeHero,
     labHero,
@@ -81,10 +83,15 @@ function Index() {
     skincareHero,
     homeVisitImage,
     deliveryHero,
+    promoCardSlide,
   ];
   const marketingVideos = [clip1, clip2];
   const [activeSlide, setActiveSlide] = useState(0);
+  const [showPromoAnnouncement, setShowPromoAnnouncement] = useState(true);
   const [videoLayouts, setVideoLayouts] = useState<Record<string, "portrait" | "landscape">>({});
+  const visibleHeroSlides = showPromoAnnouncement
+    ? heroSlides
+    : heroSlides.filter((slide) => slide !== promoCardSlide);
   const loadServicesFn = useServerFn(listServices);
   const bookServiceFn = useServerFn(createBooking);
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -107,11 +114,11 @@ function Index() {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setActiveSlide((current) => (current + 1) % heroSlides.length);
+      setActiveSlide((current) => (current + 1) % visibleHeroSlides.length);
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [heroSlides.length]);
+  }, [visibleHeroSlides.length]);
 
   useEffect(() => {
     let mounted = true;
@@ -136,6 +143,15 @@ function Index() {
     setQuickBookingForm({ customer_name: "", customer_phone: "", customer_email: "" });
     setQuickBookingStatus({ type: "idle", message: "" });
     setQuickBookingOpen(true);
+  };
+
+  const currentHeroSlide = visibleHeroSlides[activeSlide % visibleHeroSlides.length];
+
+  const openPromoWhatsApp = () => {
+    const message = encodeURIComponent(
+      "Hello Nuno Pharmacy, I would like to learn more about the wellness promotion and book a consultation.",
+    );
+    window.open(`https://wa.me/254703244711?text=${message}`, "_blank", "noopener,noreferrer");
   };
 
   const handlePromoVideoMetadata = (
@@ -365,19 +381,103 @@ function Index() {
 
           <Reveal delay={120} className="relative lg:justify-self-end">
             <div className="relative overflow-hidden rounded-[calc(var(--radius-3xl)+8px)] border border-primary-foreground/15 bg-primary-foreground/8 p-3 backdrop-blur-sm shadow-elegant">
-              <img
-                src={heroSlides[activeSlide]}
-                alt="Nuno Pharmacy highlights"
-                className="aspect-[5/4] w-full rounded-[calc(var(--radius-3xl))] object-cover transition-all duration-500"
-                width={1280}
-                height={1600}
-              />
+              {currentHeroSlide === promoCardSlide ? (
+                <div className="relative flex aspect-[5/4] w-full items-center justify-center overflow-hidden rounded-[calc(var(--radius-3xl))] border border-emerald-200 bg-[#f3f7f4] p-4 shadow-inner">
+                  <div className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-emerald-600/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                    PathCare Kenya
+                  </div>
+
+                  <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPromoAnnouncement(false)}
+                      aria-label="Remove promotion announcement"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-white/90 text-slate-700 shadow-sm transition-transform duration-200 hover:scale-105 hover:bg-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openPromoWhatsApp}
+                      aria-label="Chat on WhatsApp"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 transition-transform duration-200 hover:scale-105 hover:bg-emerald-500"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="absolute right-4 top-16">
+                    <div className="promo-badge-shell">
+                      <span className="promo-badge-inner">Save up to 60%</span>
+                    </div>
+                  </div>
+
+                  <div className="w-full rounded-[1.35rem] border border-[#dfece0] bg-[#f7faf8] p-4 shadow-[0_14px_35px_rgba(11,67,42,0.08)]">
+                    <div className="inline-flex items-center gap-2 rounded-md bg-emerald-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                      Special Promo
+                    </div>
+
+                    <h3 className="mt-4 text-3xl font-black leading-[1.05] tracking-[-0.04em] text-[#1a1c1b] md:text-[2.6rem]">
+                      Full Body Wellness
+                    </h3>
+
+                    <p className="mt-3 text-sm leading-relaxed text-slate-700 md:text-base">
+                      Complete diagnostic health screening with free home/office sample collection
+                      in Nairobi & South C.
+                    </p>
+
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                        <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-700">
+                          Comprehensive
+                        </div>
+                        <div className="mt-2 text-sm font-medium text-emerald-900 line-through decoration-red-500">
+                          KES 35,290
+                        </div>
+                        <div className="mt-1 text-2xl font-black text-emerald-700">KES 13,999/=</div>
+                      </div>
+
+                      <div className="rounded-2xl border border-red-200 bg-red-50 p-3">
+                        <div className="text-[9px] font-bold uppercase tracking-[0.14em] text-red-700">
+                          Advanced +
+                        </div>
+                        <div className="mt-2 text-sm font-medium text-red-900 line-through decoration-red-500">
+                          KES 40,360
+                        </div>
+                        <div className="mt-1 text-2xl font-black text-red-700">KES 14,999/=</div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold uppercase tracking-[0.04em] text-white shadow-lg shadow-emerald-700/20 transition hover:bg-emerald-500"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                      See Full Test List &amp; Book
+                    </button>
+
+                    <div className="mt-3 flex items-center justify-center gap-2 text-xs font-medium text-slate-600">
+                      <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                      South C, Nairobi &amp; Home Visits
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={currentHeroSlide as string}
+                  alt="Nuno Pharmacy highlights"
+                  className="aspect-[5/4] w-full rounded-[calc(var(--radius-3xl))] object-cover transition-all duration-500"
+                  width={1280}
+                  height={1600}
+                />
+              )}
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent p-3">
                 <button
                   type="button"
                   onClick={() =>
                     setActiveSlide(
-                      (current) => (current - 1 + heroSlides.length) % heroSlides.length,
+                      (current) => (current - 1 + visibleHeroSlides.length) % visibleHeroSlides.length,
                     )
                   }
                   className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur"
@@ -385,19 +485,19 @@ function Index() {
                   Prev
                 </button>
                 <div className="flex items-center gap-2">
-                  {heroSlides.map((_, index) => (
+                  {visibleHeroSlides.map((_, index) => (
                     <button
                       key={index}
                       type="button"
                       onClick={() => setActiveSlide(index)}
-                      className={`h-2.5 rounded-full transition-all ${index === activeSlide ? "w-6 bg-white" : "w-2.5 bg-white/60"}`}
+                      className={`h-2.5 rounded-full transition-all ${index === activeSlide % visibleHeroSlides.length ? "w-6 bg-white" : "w-2.5 bg-white/60"}`}
                       aria-label={`Show slide ${index + 1}`}
                     />
                   ))}
                 </div>
                 <button
                   type="button"
-                  onClick={() => setActiveSlide((current) => (current + 1) % heroSlides.length)}
+                  onClick={() => setActiveSlide((current) => (current + 1) % visibleHeroSlides.length)}
                   className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur"
                 >
                   Next
