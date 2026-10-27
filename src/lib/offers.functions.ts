@@ -40,7 +40,7 @@ const offerInputSchema = z.object({
 });
 
 export const upsertOffer = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => offerInputSchema.parse(input))
+  .validator((input: unknown) => offerInputSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -98,7 +98,7 @@ export const upsertOffer = createServerFn({ method: "POST" })
   });
 
 export const removeOffer = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("offers").delete().eq("id", data.id);

@@ -81,7 +81,7 @@ const serviceCategoryInputSchema = z.object({
 });
 
 export const upsertService = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => serviceInputSchema.parse(input))
+  .validator((input: unknown) => serviceInputSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -105,7 +105,7 @@ export const upsertService = createServerFn({ method: "POST" })
   });
 
 export const upsertServiceCategory = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => serviceCategoryInputSchema.parse(input))
+  .validator((input: unknown) => serviceCategoryInputSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -130,7 +130,7 @@ const uploadServiceImageSchema = z.object({
 });
 
 export const uploadServiceImage = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => uploadServiceImageSchema.parse(input))
+  .validator((input: unknown) => uploadServiceImageSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const match = /^data:(.+?);base64,(.+)$/.exec(data.data_url);
@@ -153,7 +153,7 @@ export const uploadServiceImage = createServerFn({ method: "POST" })
   });
 
 export const removeService = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("services").delete().eq("id", data.id);

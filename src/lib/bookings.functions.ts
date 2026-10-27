@@ -162,7 +162,7 @@ export const listBookings = createServerFn({ method: "GET" }).handler(async () =
 });
 
 export const createBooking = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => bookingRequestSchema.parse(input))
+  .validator((input: unknown) => bookingRequestSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const phone = normalizeKenyanPhone(data.customer_phone);
@@ -230,7 +230,7 @@ export const createBooking = createServerFn({ method: "POST" })
   });
 
 export const updateBooking = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => bookingUpdateSchema.parse(input))
+  .validator((input: unknown) => bookingUpdateSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const payload: {

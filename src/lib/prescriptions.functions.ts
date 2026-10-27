@@ -13,7 +13,7 @@ const getPrescriptionSchema = z.object({
 });
 
 export const createPrescription = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => createPrescriptionSchema.parse(input))
+  .validator((input: unknown) => createPrescriptionSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const match = /^data:(.+?);base64,(.+)$/.exec(data.prescription_data_url);
@@ -55,7 +55,7 @@ export const createPrescription = createServerFn({ method: "POST" })
   });
 
 export const getPrescription = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => getPrescriptionSchema.parse(input))
+  .validator((input: unknown) => getPrescriptionSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: prescription, error } = await supabaseAdmin

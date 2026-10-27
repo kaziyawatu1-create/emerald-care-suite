@@ -66,7 +66,7 @@ const productInputSchema = z.object({
 });
 
 export const upsertProduct = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => productInputSchema.parse(input))
+  .validator((input: unknown) => productInputSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const payload = {
@@ -133,7 +133,7 @@ const brandInputSchema = z.object({
 });
 
 export const upsertBrand = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => brandInputSchema.parse(input))
+  .validator((input: unknown) => brandInputSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const payload = {
@@ -163,7 +163,7 @@ export const upsertBrand = createServerFn({ method: "POST" })
   });
 
 export const removeBrand = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("products").update({ brand_id: null }).eq("brand_id", data.id);
@@ -173,7 +173,7 @@ export const removeBrand = createServerFn({ method: "POST" })
   });
 
 export const upsertCategory = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ id: z.string().min(1).optional(), name: z.string().min(1).max(80), description: z.string().max(500).optional().default("") }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().min(1).optional(), name: z.string().min(1).max(80), description: z.string().max(500).optional().default("") }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const payload = { id: data.id, name: data.name, description: data.description ?? "" };
@@ -203,7 +203,7 @@ export const upsertCategory = createServerFn({ method: "POST" })
   });
 
 export const removeProduct = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("products").delete().eq("id", data.id);
@@ -217,7 +217,7 @@ const uploadImageSchema = z.object({
 });
 
 export const uploadProductImage = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => uploadImageSchema.parse(input))
+  .validator((input: unknown) => uploadImageSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const match = /^data:(.+?);base64,(.+)$/.exec(data.data_url);
@@ -244,7 +244,7 @@ export const uploadProductImage = createServerFn({ method: "POST" })
 
 
 export const removeCategory = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: category, error: categoryError } = await supabaseAdmin.from("product_categories").select("name").eq("id", data.id).maybeSingle();
@@ -268,7 +268,7 @@ const laboratoryBookingSchema = z.object({
 });
 
 export const bookLaboratoryTest = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => laboratoryBookingSchema.parse(input))
+  .validator((input: unknown) => laboratoryBookingSchema.parse(input))
   .handler(async ({ data }) => {
     const contactEmail = process.env.CONTACT_EMAIL ?? "nunopharmaceutical@gmail.com";
     const phone = normalizeKenyanPhone(data.patient_phone);
@@ -327,7 +327,7 @@ const placeOrderSchema = z.object({
 });
 
 export const placeOrder = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => placeOrderSchema.parse(input))
+  .validator((input: unknown) => placeOrderSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -497,7 +497,7 @@ async function initiateStkPush(args: { orderId: string; phone: string; amount: n
 }
 
 export const getOrderStatus = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => z.object({ order_id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ order_id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: order, error } = await supabaseAdmin
